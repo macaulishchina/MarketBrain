@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { auth } from '../../../lib/auth';
 import { prisma } from '@marketbrain/db';
+import { t } from '../../../lib/i18n';
 
 export default async function WatchlistsPage() {
   const session = await auth();
@@ -18,9 +19,9 @@ export default async function WatchlistsPage() {
     <div className="p-6 md:p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Watchlists</h1>
+          <h1 className="text-2xl font-bold">{t.watchlists.title}</h1>
           <p className="mt-1 text-muted-foreground">
-            Manage your instrument watchlists.
+            {t.watchlists.subtitle}
           </p>
         </div>
       </div>
@@ -28,7 +29,7 @@ export default async function WatchlistsPage() {
       {watchlists.length === 0 ? (
         <div className="rounded-lg border bg-card p-12 text-center">
           <p className="text-muted-foreground">
-            No watchlists yet. Create one to start tracking instruments.
+            {t.watchlists.noWatchlistsYet}
           </p>
         </div>
       ) : (
@@ -40,7 +41,7 @@ export default async function WatchlistsPage() {
                 <p className="mt-1 text-sm text-muted-foreground">{wl.description}</p>
               )}
               <p className="mt-3 text-xs text-muted-foreground">
-                {wl._count.items} instrument{wl._count.items !== 1 ? 's' : ''}
+                {wl._count.items} {t.watchlists.instruments}
               </p>
             </div>
           ))}

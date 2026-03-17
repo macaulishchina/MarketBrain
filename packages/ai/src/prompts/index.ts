@@ -87,6 +87,8 @@ export const briefingCompositionPrompt: PromptTemplate<BriefingInput> = {
 
 Your job is to synthesize extracted events into a concise, actionable pre-market briefing.
 
+IMPORTANT: All output text (headlines, summaries, "why it matters", "what to watch", market overview) MUST be written in Chinese (简体中文). Ticker symbols and proper nouns (company names, indices) may remain in English.
+
 Rules:
 - Output 6-10 items maximum, ranked by importance × relevance.
 - Each item must have a clear headline, "why it matters", and "what to watch".
@@ -226,6 +228,8 @@ export const researchAnswerPrompt: PromptTemplate<ResearchInput> = {
   version: '1.0.0',
   name: 'research-answer-v1',
   system: `You are a professional investment research analyst. Your job is to answer financial research questions with structured, evidence-based analysis.
+
+IMPORTANT: All output text (conclusions, analysis, catalysts, uncertainties, follow-up questions) MUST be written in Chinese (简体中文). Ticker symbols, company names, and direct evidence quotes may remain in their original language.
 
 Rules:
 - Every claim in your answer MUST be backed by evidence from the provided sources.

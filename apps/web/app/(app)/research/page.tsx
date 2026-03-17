@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, Archive, Clock } from 'lucide-react';
+import { t, formatDate } from '../../../lib/i18n';
 
 interface SessionSummary {
   id: string;
@@ -15,12 +16,7 @@ interface SessionSummary {
   _count: { messages: number };
 }
 
-const modeLabels: Record<string, string> = {
-  single_instrument: 'Single Instrument',
-  theme: 'Theme',
-  comparison: 'Comparison',
-  freeform: 'Freeform',
-};
+const modeLabels = t.modeLabels;
 
 export default function ResearchPage() {
   const router = useRouter();
@@ -66,9 +62,9 @@ export default function ResearchPage() {
     <div className="p-6 md:p-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold">Research</h1>
+        <h1 className="text-2xl font-bold">{t.research.title}</h1>
         <p className="mt-1 text-muted-foreground">
-          Interactive AI-powered research sessions with evidence-backed analysis.
+          {t.research.subtitle}
         </p>
       </div>
 
@@ -82,7 +78,7 @@ export default function ResearchPage() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && createSession()}
-              placeholder="Ask a research question... e.g. 'What's the thesis for AAPL?'"
+              placeholder={t.research.placeholder}
               disabled={creating}
               className="w-full rounded-lg border bg-background pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
             />
@@ -93,7 +89,7 @@ export default function ResearchPage() {
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
           >
             <Plus className="h-4 w-4" />
-            Start Research
+            {t.research.startResearch}
           </button>
         </div>
       </div>
@@ -110,21 +106,21 @@ export default function ResearchPage() {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            {f === 'all' ? 'All Sessions' : f === 'active' ? 'Active' : 'Archived'}
+            {f === 'all' ? t.research.allSessions : f === 'active' ? t.research.active : t.research.archived}
           </button>
         ))}
       </div>
 
       {/* Session list */}
       {loading ? (
-        <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        <div className="text-center py-8 text-muted-foreground">{t.research.loading}</div>
       ) : sessions.length === 0 ? (
         <div className="rounded-lg border bg-card p-12 text-center">
           <Search className="mx-auto h-8 w-8 text-muted-foreground/50 mb-3" />
           <p className="text-muted-foreground">
             {filter === 'all'
-              ? 'No research sessions yet. Start a new session above.'
-              : `No ${filter} sessions.`}
+              ? t.research.noSessionsYet
+              : `没有${filter === 'active' ? t.research.active : t.research.archived}的会话。`}
           </p>
         </div>
       ) : (
@@ -137,7 +133,7 @@ export default function ResearchPage() {
             >
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium truncate">
-                  {s.title ?? s.query ?? 'Untitled Session'}
+                  {s.title ?? s.query ?? t.research.untitledSession}
                 </h3>
                 <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                   <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5">
@@ -145,12 +141,12 @@ export default function ResearchPage() {
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <Clock className="h-3 w-3" />
-                    {new Date(s.updatedAt).toLocaleDateString()}
+                    {formatDate(s.updatedAt)}
                   </span>
-                  <span>{s._count.messages} messages</span>
+                  <span>{s._count.messages} {t.research.messages}</span>
                   {s.status === 'archived' && (
                     <span className="inline-flex items-center gap-1 text-amber-600">
-                      <Archive className="h-3 w-3" /> Archived
+                      <Archive className="h-3 w-3" /> {t.research.archived}
                     </span>
                   )}
                 </div>

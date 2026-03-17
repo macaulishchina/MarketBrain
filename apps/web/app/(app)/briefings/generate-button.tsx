@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { t } from '../../../lib/i18n';
 
 export function GenerateBriefingButton() {
   const [loading, setLoading] = useState(false);
@@ -16,17 +17,16 @@ export function GenerateBriefingButton() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ market: 'US' }),
       });
-      const data = await res.json() as { briefingId?: string; status?: string; error?: string };
+      const data = await res.json() as { briefingId?: string; status?: string; itemCount?: number; error?: string };
 
       if (!res.ok) {
-        setMessage(data.error ?? 'Failed to trigger generation');
+        setMessage(data.error ?? '生成失败');
       } else {
-        setMessage(`Briefing ${data.status} (${data.briefingId?.slice(0, 8)}…)`);
-        // Refresh the page after a short delay to show updated list
-        setTimeout(() => window.location.reload(), 1500);
+        setMessage(`${t.briefingStatus[data.status ?? ''] ?? data.status} — ${data.itemCount ?? 0}${t.briefings.items}`);
+        window.location.reload();
       }
     } catch {
-      setMessage('Network error');
+      setMessage('网络错误');
     } finally {
       setLoading(false);
     }
@@ -42,7 +42,7 @@ export function GenerateBriefingButton() {
         disabled={loading}
         className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
       >
-        {loading ? 'Generating…' : 'Generate Briefing'}
+        {loading ? t.briefings.generating : t.briefings.generate}
       </button>
     </div>
   );

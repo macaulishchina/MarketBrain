@@ -95,7 +95,7 @@ export default function AdminAlertPrecisionPage() {
         <div className="rounded-lg border bg-card p-4">
           <p className="text-sm text-muted-foreground">Period</p>
           <p className="text-lg font-semibold">{days} days</p>
-          <p className="text-xs text-muted-foreground">since {new Date(data.period.since).toLocaleDateString()}</p>
+          <p className="text-xs text-muted-foreground">自 {new Date(data.period.since).toLocaleDateString('zh-CN')} 起</p>
         </div>
       </div>
 

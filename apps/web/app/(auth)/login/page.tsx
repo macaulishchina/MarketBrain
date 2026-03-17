@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { t } from '../../../lib/i18n';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +26,7 @@ export default function LoginPage() {
     setLoading(false);
 
     if (result?.error) {
-      setError('Invalid email or password.');
+      setError(t.auth.invalidCredentials);
     } else {
       router.push('/dashboard');
     }
@@ -35,9 +36,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background p-8">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">MarketBrain</h1>
+          <h1 className="text-3xl font-bold tracking-tight">{t.brand}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Sign in to your investment research workspace.
+            {t.auth.signInSubtitle}
           </p>
         </div>
 
@@ -50,7 +51,7 @@ export default function LoginPage() {
 
           <div className="space-y-2">
             <label htmlFor="email" className="text-sm font-medium">
-              Email
+              {t.auth.email}
             </label>
             <input
               id="email"
@@ -60,13 +61,13 @@ export default function LoginPage() {
               required
               autoComplete="email"
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="you@example.com"
+              placeholder={t.auth.emailPlaceholder}
             />
           </div>
 
           <div className="space-y-2">
             <label htmlFor="password" className="text-sm font-medium">
-              Password
+              {t.auth.password}
             </label>
             <input
               id="password"
@@ -85,7 +86,7 @@ export default function LoginPage() {
             disabled={loading}
             className="inline-flex h-10 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
-            {loading ? 'Signing in…' : 'Sign In'}
+            {loading ? t.auth.signingIn : t.auth.signIn}
           </button>
         </form>
 
@@ -94,7 +95,7 @@ export default function LoginPage() {
             <div className="w-full border-t" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
+            <span className="bg-background px-2 text-muted-foreground">{t.auth.orContinueWith}</span>
           </div>
         </div>
 

@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { prisma } from '@marketbrain/db';
 import { auth } from '../../../lib/auth';
 import { GenerateBriefingButton } from './generate-button';
+import { t, formatDateShort, formatTime } from '../../../lib/i18n';
 
 const STATUS_STYLES: Record<string, string> = {
   published: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -25,9 +26,9 @@ export default async function BriefingsPage() {
     <div className="p-6 md:p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Briefings</h1>
+          <h1 className="text-2xl font-bold">{t.briefings.title}</h1>
           <p className="mt-1 text-muted-foreground">
-            Pre-market daily briefings powered by AI analysis.
+            {t.briefings.subtitle}
           </p>
         </div>
         {isAdmin && <GenerateBriefingButton />}
@@ -36,7 +37,7 @@ export default async function BriefingsPage() {
       {briefings.length === 0 ? (
         <div className="rounded-lg border bg-card p-12 text-center">
           <p className="text-muted-foreground">
-            No briefings yet. {isAdmin ? 'Click "Generate" to create one.' : 'Briefings will appear here once the AI pipeline generates them.'}
+            {t.briefings.noBriefingsYet} {isAdmin ? t.briefings.noBriefingsAdmin : t.briefings.noBriefingsUser}
           </p>
         </div>
       ) : (
@@ -50,22 +51,17 @@ export default async function BriefingsPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">
-                    {b.market} — {b.tradingDate.toLocaleDateString('en-US', {
-                      weekday: 'short',
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                    })}
+                    {b.market} — {formatDateShort(b.tradingDate)}
                   </h3>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {b._count.items} item{b._count.items !== 1 ? 's' : ''}
-                    {b.generatedAt ? ` · Generated ${b.generatedAt.toLocaleTimeString()}` : ''}
+                    {b._count.items} {t.briefings.items}
+                    {b.generatedAt ? ` · ${t.briefings.generated} ${formatTime(b.generatedAt)}` : ''}
                   </p>
                 </div>
                 <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[b.status] ?? STATUS_STYLES.draft}`}
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[b.status] ?? STATUS_STYLES.draft}`}
                 >
-                  {b.status}
+                  {t.briefingStatus[b.status] ?? b.status}
                 </span>
               </div>
             </a>

@@ -33,3 +33,4 @@ packages/db/prisma/*.db-journal
 *.log
 npm-debug.log*
 pnpm-debug.log*
+packages/db/.env

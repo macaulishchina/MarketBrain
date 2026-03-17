@@ -124,7 +124,7 @@ export default function AdminOperationsPage() {
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <div className="rounded-lg border bg-card p-4">
           <p className="text-sm text-muted-foreground">Total Calls</p>
-          <p className="text-2xl font-bold">{totalCalls.toLocaleString()}</p>
+          <p className="text-2xl font-bold">{totalCalls.toLocaleString('zh-CN')}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <p className="text-sm text-muted-foreground">Success Rate</p>
@@ -208,7 +208,7 @@ export default function AdminOperationsPage() {
                 {calls.map((c) => (
                   <tr key={c.id} className="border-b last:border-0">
                     <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(c.createdAt).toLocaleString()}
+                      {new Date(c.createdAt).toLocaleString('zh-CN')}
                     </td>
                     <td className="p-3 capitalize">{c.provider}</td>
                     <td className="p-3 font-mono text-xs">{c.model}</td>

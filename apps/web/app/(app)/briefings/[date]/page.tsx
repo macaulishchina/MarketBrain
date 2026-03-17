@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { prisma } from '@marketbrain/db';
 import { notFound } from 'next/navigation';
+import { t, formatDateLong, formatDateTime } from '../../../../lib/i18n';
 
 const STATUS_STYLES: Record<string, string> = {
   published: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
@@ -40,27 +41,22 @@ export default async function BriefingDetailPage({
     <div className="p-6 md:p-8 space-y-6">
       <div>
         <a href="/briefings" className="text-sm text-muted-foreground hover:underline">
-          ← Back to Briefings
+          {t.briefings.backToBriefings}
         </a>
         <div className="mt-2 flex items-center gap-3">
           <h1 className="text-2xl font-bold">
-            {briefing.market} Briefing — {briefing.tradingDate.toLocaleDateString('en-US', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-            })}
+            {briefing.market} {t.briefings.title} — {formatDateLong(briefing.tradingDate)}
           </h1>
           <span
-            className={`rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${STATUS_STYLES[briefing.status] ?? STATUS_STYLES.draft}`}
+            className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[briefing.status] ?? STATUS_STYLES.draft}`}
           >
-            {briefing.status}
+            {t.briefingStatus[briefing.status] ?? briefing.status}
           </span>
         </div>
         {briefing.generatedAt && (
           <p className="mt-1 text-xs text-muted-foreground">
-            Generated {briefing.generatedAt.toLocaleString()}
-            {briefing.promptVersion ? ` · Prompt v${briefing.promptVersion}` : ''}
+            {t.briefings.generated} {formatDateTime(briefing.generatedAt)}
+            {briefing.promptVersion ? ` · ${t.briefings.promptVersion} v${briefing.promptVersion}` : ''}
           </p>
         )}
       </div>
@@ -69,10 +65,10 @@ export default async function BriefingDetailPage({
         <div className="rounded-lg border bg-card p-12 text-center">
           <p className="text-muted-foreground">
             {briefing.status === 'generating'
-              ? 'Briefing is being generated…'
+              ? t.briefings.briefingGenerating
               : briefing.status === 'failed'
-                ? 'Briefing generation failed. An admin can retry.'
-                : 'No items in this briefing.'}
+                ? t.briefings.briefingFailed
+                : t.briefings.noItems}
           </p>
         </div>
       ) : (
@@ -91,7 +87,7 @@ export default async function BriefingDetailPage({
                     <p className="text-sm">{item.whyItMatters}</p>
 
                     <p className="text-sm text-muted-foreground">
-                      <span className="font-medium text-foreground">Watch:</span>{' '}
+                      <span className="font-medium text-foreground">{t.briefings.watch}</span>{' '}
                       {item.whatToWatch}
                     </p>
 
@@ -99,7 +95,7 @@ export default async function BriefingDetailPage({
                     {evidenceIds && evidenceIds.length > 0 && (
                       <div className="mt-3 space-y-1.5">
                         <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                          Evidence
+                          {t.briefings.evidence}
                         </p>
                         {evidenceIds.map((quote, qi) => (
                           <blockquote
@@ -128,7 +124,7 @@ export default async function BriefingDetailPage({
                                   : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                             }`}
                           >
-                            Confidence: {(item.event.confidenceScore * 100).toFixed(0)}%
+                            {t.briefings.confidence}：{(item.event.confidenceScore * 100).toFixed(0)}%
                           </span>
                         )}
                       </div>

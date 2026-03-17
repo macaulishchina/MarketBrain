@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { t } from '../../../lib/i18n';
 
 type Step = 'welcome' | 'watchlist' | 'notifications' | 'complete';
 
@@ -63,11 +64,11 @@ export default function OnboardingPage() {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? 'Failed to save preferences');
+        throw new Error(data.error ?? '保存偏好设置失败');
       }
       setStep('complete');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : t.onboarding.somethingWrong);
     } finally {
       setSaving(false);
     }
@@ -92,15 +93,15 @@ export default function OnboardingPage() {
         {step === 'welcome' && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold">Welcome to MarketBrain</h1>
+              <h1 className="text-2xl font-bold">{t.onboarding.welcome}</h1>
               <p className="mt-2 text-muted-foreground">
-                Let&apos;s set up your investment research workspace in a few quick steps.
+                {t.onboarding.welcomeDesc}
               </p>
             </div>
 
             <div className="space-y-2">
               <label htmlFor="display-name" className="text-sm font-medium">
-                Display Name (optional)
+                {t.onboarding.displayName}
               </label>
               <input
                 id="display-name"
@@ -108,7 +109,7 @@ export default function OnboardingPage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="How should we call you?"
+                placeholder={t.onboarding.displayNamePlaceholder}
                 autoFocus
               />
             </div>
@@ -118,7 +119,7 @@ export default function OnboardingPage() {
               onClick={() => setStep('watchlist')}
               className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Get Started
+              {t.onboarding.getStarted}
             </button>
           </div>
         )}
@@ -127,9 +128,9 @@ export default function OnboardingPage() {
         {step === 'watchlist' && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold">Build Your Watchlist</h1>
+              <h1 className="text-2xl font-bold">{t.onboarding.buildWatchlist}</h1>
               <p className="mt-2 text-muted-foreground">
-                Select instruments you want to track. You can always change this later.
+                {t.onboarding.watchlistDesc}
               </p>
             </div>
 
@@ -153,7 +154,7 @@ export default function OnboardingPage() {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              {selectedTickers.size} selected
+              {selectedTickers.size} {t.onboarding.selected}
             </p>
 
             <div className="flex gap-3">
@@ -162,14 +163,14 @@ export default function OnboardingPage() {
                 onClick={() => setStep('welcome')}
                 className="inline-flex h-11 flex-1 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium transition-colors hover:bg-accent"
               >
-                Back
+                {t.onboarding.back}
               </button>
               <button
                 type="button"
                 onClick={() => setStep('notifications')}
                 className="inline-flex h-11 flex-1 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                {selectedTickers.size > 0 ? 'Continue' : 'Skip'}
+                {selectedTickers.size > 0 ? t.onboarding.continue : t.onboarding.skip}
               </button>
             </div>
           </div>
@@ -179,18 +180,18 @@ export default function OnboardingPage() {
         {step === 'notifications' && (
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold">Notification Preferences</h1>
+              <h1 className="text-2xl font-bold">{t.onboarding.notificationPrefs}</h1>
               <p className="mt-2 text-muted-foreground">
-                Choose how you want to receive alerts and briefings.
+                {t.onboarding.notifDesc}
               </p>
             </div>
 
             <fieldset className="space-y-3">
-              <legend className="text-sm font-medium">Alert Channels</legend>
+              <legend className="text-sm font-medium">{t.onboarding.notificationPrefs}</legend>
               {([
-                { key: 'inApp' as const, label: 'In-App Notifications', desc: 'See alerts in your dashboard' },
-                { key: 'email' as const, label: 'Email Alerts', desc: 'Get important alerts via email' },
-                { key: 'push' as const, label: 'Push Notifications', desc: 'Browser push for urgent alerts' },
+                { key: 'inApp' as const, label: t.onboarding.inAppNotif, desc: t.onboarding.inAppNotifDesc },
+                { key: 'email' as const, label: t.onboarding.emailAlerts, desc: t.onboarding.emailAlertsDesc },
+                { key: 'push' as const, label: t.onboarding.pushNotif, desc: t.onboarding.pushNotifDesc },
               ]).map((ch) => (
                 <label key={ch.key} className="flex items-start gap-3 rounded-lg border p-3 cursor-pointer hover:bg-accent/50 transition-colors">
                   <input
@@ -211,7 +212,7 @@ export default function OnboardingPage() {
 
             <div className="space-y-2">
               <label htmlFor="briefing-time" className="text-sm font-medium">
-                Daily Briefing Time
+                {t.onboarding.dailyBriefingTime}
               </label>
               <input
                 id="briefing-time"
@@ -221,7 +222,7 @@ export default function OnboardingPage() {
                 className="flex h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
               <p className="text-xs text-muted-foreground">
-                Pre-market briefing delivery time (your local timezone).
+                {t.onboarding.briefingTimeDesc}
               </p>
             </div>
 
@@ -237,7 +238,7 @@ export default function OnboardingPage() {
                 onClick={() => setStep('watchlist')}
                 className="inline-flex h-11 flex-1 items-center justify-center rounded-md border bg-background px-4 text-sm font-medium transition-colors hover:bg-accent"
               >
-                Back
+                {t.onboarding.back}
               </button>
               <button
                 type="button"
@@ -245,7 +246,7 @@ export default function OnboardingPage() {
                 disabled={saving}
                 className="inline-flex h-11 flex-1 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
               >
-                {saving ? 'Saving…' : 'Complete Setup'}
+                {saving ? t.onboarding.saving : t.onboarding.completeSetup}
               </button>
             </div>
           </div>
@@ -260,9 +261,9 @@ export default function OnboardingPage() {
               </svg>
             </div>
             <div>
-              <h1 className="text-2xl font-bold">You&apos;re All Set!</h1>
+              <h1 className="text-2xl font-bold">{t.onboarding.allSet}</h1>
               <p className="mt-2 text-muted-foreground">
-                Your workspace is ready. Start exploring your investment research dashboard.
+                {t.onboarding.allSetDesc}
               </p>
             </div>
             <button
@@ -270,7 +271,7 @@ export default function OnboardingPage() {
               onClick={() => router.push('/dashboard')}
               className="inline-flex h-11 w-full items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              Go to Dashboard
+              {t.onboarding.goToDashboard}
             </button>
           </div>
         )}

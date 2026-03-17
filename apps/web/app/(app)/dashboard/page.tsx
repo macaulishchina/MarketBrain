@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { auth } from '../../../lib/auth';
 import { prisma } from '@marketbrain/db';
+import { t } from '../../../lib/i18n';
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -16,45 +17,45 @@ export default async function DashboardPage() {
     <div className="p-6 md:p-8 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">
-          Welcome back, {session!.user.name}
+          {t.dashboard.welcomeBack}，{session!.user.name}
         </h1>
         <p className="mt-1 text-muted-foreground">
-          Your investment research workspace overview.
+          {t.dashboard.overview}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <DashboardCard
-          title="Watchlists"
+          title={t.dashboard.watchlists}
           value={watchlistCount}
-          description="Active watchlists"
+          description={t.dashboard.activeWatchlists}
           href="/watchlists"
         />
         <DashboardCard
-          title="Pending Alerts"
+          title={t.dashboard.pendingAlerts}
           value={alertCount}
-          description="Unread alerts"
+          description={t.dashboard.unreadAlerts}
           href="/alerts"
         />
         <DashboardCard
-          title="Briefings"
+          title={t.dashboard.briefings}
           value={briefingCount}
-          description="Published briefings"
+          description={t.dashboard.publishedBriefings}
           href="/briefings"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="rounded-lg border bg-card p-6">
-          <h2 className="text-lg font-semibold">Recent Briefings</h2>
+          <h2 className="text-lg font-semibold">{t.dashboard.recentBriefings}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            No briefings yet. Briefings will appear here once the AI pipeline is active.
+            {t.dashboard.noBriefingsYet}
           </p>
         </div>
         <div className="rounded-lg border bg-card p-6">
-          <h2 className="text-lg font-semibold">Recent Alerts</h2>
+          <h2 className="text-lg font-semibold">{t.dashboard.recentAlerts}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            No alerts yet. Alerts will appear here as events are detected.
+            {t.dashboard.noAlertsYet}
           </p>
         </div>
       </div>

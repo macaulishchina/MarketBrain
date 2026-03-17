@@ -10,6 +10,7 @@ import {
   Settings,
   Shield,
 } from 'lucide-react';
+import { t } from '../../../lib/i18n';
 
 type NavItem = {
   href: string;
@@ -19,15 +20,15 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-5 w-5" />, mobile: true },
-  { href: '/briefings', label: 'Briefings', icon: <Newspaper className="h-5 w-5" />, mobile: true },
-  { href: '/alerts', label: 'Alerts', icon: <Bell className="h-5 w-5" />, mobile: true },
-  { href: '/research', label: 'Research', icon: <Search className="h-5 w-5" />, mobile: true },
-  { href: '/watchlists', label: 'Watchlists', icon: <List className="h-5 w-5" /> },
+  { href: '/dashboard', label: t.nav.dashboard, icon: <LayoutDashboard className="h-5 w-5" />, mobile: true },
+  { href: '/briefings', label: t.nav.briefings, icon: <Newspaper className="h-5 w-5" />, mobile: true },
+  { href: '/alerts', label: t.nav.alerts, icon: <Bell className="h-5 w-5" />, mobile: true },
+  { href: '/research', label: t.nav.research, icon: <Search className="h-5 w-5" />, mobile: true },
+  { href: '/watchlists', label: t.nav.watchlists, icon: <List className="h-5 w-5" /> },
 ];
 
 const bottomNavItems: NavItem[] = [
-  { href: '/settings/profile', label: 'Settings', icon: <Settings className="h-5 w-5" /> },
+  { href: '/settings/profile', label: t.nav.settings, icon: <Settings className="h-5 w-5" /> },
 ];
 
 export function AppShell({
@@ -46,13 +47,13 @@ export function AppShell({
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:text-primary-foreground"
       >
-        Skip to main content
+        {t.nav.skipToMain}
       </a>
 
       {/* Desktop Sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-card md:flex" role="navigation" aria-label="Main navigation">
         <div className="flex h-14 items-center border-b px-4">
-          <span className="text-lg font-bold tracking-tight">MarketBrain</span>
+          <span className="text-lg font-bold tracking-tight">{t.brand}</span>
         </div>
 
         <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Primary">
@@ -85,7 +86,7 @@ export function AppShell({
               }`}
             >
               <Shield className="h-5 w-5" />
-              <span>Admin</span>
+              <span>{t.nav.admin}</span>
             </a>
           )}
           {bottomNavItems.map((item) => (
@@ -122,7 +123,7 @@ export function AppShell({
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Mobile Header */}
         <header className="flex h-14 items-center border-b px-4 md:hidden">
-          <span className="text-lg font-bold tracking-tight">MarketBrain</span>
+          <span className="text-lg font-bold tracking-tight">{t.brand}</span>
         </header>
 
         <main id="main-content" className="flex-1 overflow-y-auto" role="main">

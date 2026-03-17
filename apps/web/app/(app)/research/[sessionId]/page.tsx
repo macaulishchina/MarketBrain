@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Send, Download, Archive, ChevronRight } from 'lucide-react';
+import { t } from '../../../../lib/i18n';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -145,7 +146,7 @@ export default function ResearchSessionPage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <p className="text-muted-foreground">Loading session...</p>
+        <p className="text-muted-foreground">{t.research.loadingSession}</p>
       </div>
     );
   }
@@ -153,7 +154,7 @@ export default function ResearchSessionPage() {
   if (!session) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <p className="text-muted-foreground">Session not found.</p>
+        <p className="text-muted-foreground">{t.research.sessionNotFound}</p>
       </div>
     );
   }
@@ -166,17 +167,17 @@ export default function ResearchSessionPage() {
           <ArrowLeft className="h-5 w-5" />
         </button>
         <div className="flex-1 min-w-0">
-          <h1 className="truncate font-semibold">{session.title ?? 'New Research Session'}</h1>
+          <h1 className="truncate font-semibold">{session.title ?? t.research.newSession}</h1>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="capitalize">{session.mode.replace('_', ' ')}</span>
             <span>·</span>
             <span className="capitalize">{session.status}</span>
           </div>
         </div>
-        <button onClick={handleExport} className="rounded-md p-2 text-muted-foreground hover:bg-muted" title="Export">
+        <button onClick={handleExport} className="rounded-md p-2 text-muted-foreground hover:bg-muted" title={t.common.export}>
           <Download className="h-4 w-4" />
         </button>
-        <button onClick={handleArchive} className="rounded-md p-2 text-muted-foreground hover:bg-muted" title="Archive">
+        <button onClick={handleArchive} className="rounded-md p-2 text-muted-foreground hover:bg-muted" title={t.common.archive}>
           <Archive className="h-4 w-4" />
         </button>
       </div>
@@ -203,7 +204,7 @@ export default function ResearchSessionPage() {
             {sending && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-                Researching...
+                {t.research.researching}
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -218,7 +219,7 @@ export default function ResearchSessionPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                  placeholder="Ask a research question..."
+                  placeholder={t.research.askQuestion}
                   disabled={sending}
                   className="flex-1 rounded-lg border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 disabled:opacity-50"
                 />
@@ -238,11 +239,11 @@ export default function ResearchSessionPage() {
         <div className="hidden w-80 flex-shrink-0 border-l overflow-y-auto lg:block">
           <div className="p-4">
             <h2 className="font-semibold text-sm uppercase tracking-wide text-muted-foreground mb-3">
-              Evidence Panel
+              {t.research.evidencePanel}
             </h2>
             {selectedEvidence.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Click on an answer to view its evidence here.
+                {t.research.noEvidenceSelected}
               </p>
             ) : (
               <div className="space-y-3">
@@ -298,7 +299,7 @@ function AssistantMessage({
       {/* Core conclusion */}
       <div>
         <div className="text-xs font-semibold uppercase tracking-wide text-primary mb-1">
-          Conclusion
+          {t.research.conclusion}
         </div>
         <p className="text-sm">{blocks.coreConclusion}</p>
       </div>
@@ -307,7 +308,7 @@ function AssistantMessage({
       {blocks.supportingEvidence?.length > 0 && (
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-green-600 mb-1">
-            Supporting Evidence ({blocks.supportingEvidence.length})
+            {t.research.supportingEvidence} ({blocks.supportingEvidence.length})
           </div>
           {blocks.supportingEvidence.slice(0, 2).map((ev, i) => (
             <p key={i} className="text-xs text-muted-foreground mb-1">
@@ -316,7 +317,7 @@ function AssistantMessage({
           ))}
           {blocks.supportingEvidence.length > 2 && (
             <p className="text-xs text-muted-foreground">
-              +{blocks.supportingEvidence.length - 2} more...
+              +{blocks.supportingEvidence.length - 2} {t.common.more}
             </p>
           )}
         </div>
@@ -326,7 +327,7 @@ function AssistantMessage({
       {blocks.counterEvidence?.length > 0 && (
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-amber-600 mb-1">
-            Counter Evidence ({blocks.counterEvidence.length})
+            {t.research.counterEvidence} ({blocks.counterEvidence.length})
           </div>
           {blocks.counterEvidence.slice(0, 2).map((ev, i) => (
             <p key={i} className="text-xs text-muted-foreground mb-1">
@@ -340,7 +341,7 @@ function AssistantMessage({
       {blocks.catalysts?.length > 0 && (
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-blue-600 mb-1">
-            Catalysts
+            {t.research.catalysts}
           </div>
           {blocks.catalysts.map((c, i) => (
             <p key={i} className="text-xs text-muted-foreground mb-1">• {c}</p>
@@ -352,7 +353,7 @@ function AssistantMessage({
       {blocks.uncertainties?.length > 0 && (
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-red-600 mb-1">
-            Uncertainties
+            {t.research.uncertainties}
           </div>
           {blocks.uncertainties.map((u, i) => (
             <p key={i} className="text-xs text-muted-foreground mb-1">• {u}</p>
@@ -364,7 +365,7 @@ function AssistantMessage({
       {blocks.followUps?.length > 0 && (
         <div>
           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Suggested Follow-ups
+            {t.research.followUps}
           </div>
           {blocks.followUps.map((f, i) => (
             <p key={i} className="text-xs text-primary/80 mb-1">
@@ -375,7 +376,7 @@ function AssistantMessage({
       )}
 
       <p className="text-xs text-muted-foreground/60 mt-2">
-        Click to view evidence details →
+        {t.research.clickToViewEvidence}
       </p>
     </div>
   );
@@ -408,7 +409,7 @@ function EvidenceCard({ evidence }: { evidence: EvidenceBlock }) {
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">{evidence.source}</span>
         <span className={confidenceColor}>
-          {(evidence.confidence * 100).toFixed(0)}% confidence
+          {(evidence.confidence * 100).toFixed(0)}% {t.research.confidence}
         </span>
       </div>
     </div>

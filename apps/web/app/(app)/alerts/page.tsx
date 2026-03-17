@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { auth } from '../../../lib/auth';
 import { prisma } from '@marketbrain/db';
 import Link from 'next/link';
+import { t, formatDate } from '../../../lib/i18n';
 
 interface AlertsSearchParams {
   severity?: string;
@@ -52,16 +53,16 @@ export default async function AlertsPage({
     <div className="p-6 md:p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Alerts</h1>
+          <h1 className="text-2xl font-bold">{t.alerts.title}</h1>
           <p className="mt-1 text-muted-foreground">
-            Real-time event alerts for your tracked instruments.
+            {t.alerts.subtitle}
           </p>
         </div>
         <Link
           href="/settings/notifications"
-          className="rounded-md border px-3 py-1.5 text-sm hover:bg-accent"
+          className="inline-flex items-center justify-center rounded-md bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-secondary/80"
         >
-          Preferences
+          {t.alerts.preferences}
         </Link>
       </div>
 
@@ -69,19 +70,19 @@ export default async function AlertsPage({
       <div className="grid grid-cols-3 gap-4">
         <SeveritySummaryCard
           severity="s1"
-          label="Critical"
+          label={t.alerts.critical}
           count={countMap['s1'] ?? 0}
           active={params.severity === 's1'}
         />
         <SeveritySummaryCard
           severity="s2"
-          label="High Priority"
+          label={t.alerts.highPriority}
           count={countMap['s2'] ?? 0}
           active={params.severity === 's2'}
         />
         <SeveritySummaryCard
           severity="s3"
-          label="Standard"
+          label={t.alerts.standard}
           count={countMap['s3'] ?? 0}
           active={params.severity === 's3'}
         />
@@ -89,14 +90,14 @@ export default async function AlertsPage({
 
       {/* Filters */}
       <div className="flex gap-2 flex-wrap">
-        <FilterLink href="/alerts" label="All" active={!params.severity && !params.status} />
-        <FilterLink href="/alerts?severity=s1" label="S1 — Critical" active={params.severity === 's1'} />
-        <FilterLink href="/alerts?severity=s2" label="S2 — High" active={params.severity === 's2'} />
-        <FilterLink href="/alerts?severity=s3" label="S3 — Standard" active={params.severity === 's3'} />
+        <FilterLink href="/alerts" label={t.alerts.all} active={!params.severity && !params.status} />
+        <FilterLink href="/alerts?severity=s1" label={t.alerts.s1Critical} active={params.severity === 's1'} />
+        <FilterLink href="/alerts?severity=s2" label={t.alerts.s2High} active={params.severity === 's2'} />
+        <FilterLink href="/alerts?severity=s3" label={t.alerts.s3Standard} active={params.severity === 's3'} />
         <span className="border-l mx-1" />
-        <FilterLink href="/alerts?status=sent" label="Unread" active={params.status === 'sent'} />
-        <FilterLink href="/alerts?status=read" label="Read" active={params.status === 'read'} />
-        <FilterLink href="/alerts?status=dismissed" label="Dismissed" active={params.status === 'dismissed'} />
+        <FilterLink href="/alerts?status=sent" label={t.alerts.unread} active={params.status === 'sent'} />
+        <FilterLink href="/alerts?status=read" label={t.alerts.read} active={params.status === 'read'} />
+        <FilterLink href="/alerts?status=dismissed" label={t.alerts.dismissed} active={params.status === 'dismissed'} />
       </div>
 
       {/* Alert list */}
@@ -104,8 +105,8 @@ export default async function AlertsPage({
         <div className="rounded-lg border bg-card p-12 text-center">
           <p className="text-muted-foreground">
             {params.severity || params.status
-              ? 'No alerts match your filter.'
-              : 'No alerts yet. Alerts will appear here as market events are detected.'}
+              ? t.alerts.noAlertsFilter
+              : t.alerts.noAlertsYet}
           </p>
         </div>
       ) : (
@@ -141,14 +142,14 @@ export default async function AlertsPage({
                     </div>
                   )}
                   <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{alert.createdAt.toLocaleDateString()}</span>
+                    <span>{formatDate(alert.createdAt)}</span>
                     <span className="capitalize">{alert.event.type}</span>
                   </div>
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
                   <StatusBadge status={alert.status} />
                   {alert.muted && (
-                    <span className="text-xs text-muted-foreground">Muted</span>
+                    <span className="text-xs text-muted-foreground">{t.alerts.muted}</span>
                   )}
                   <AlertActions alertId={alert.id} status={alert.status} muted={alert.muted} />
                 </div>
@@ -209,9 +210,9 @@ function StatusBadge({ status }: { status: string }) {
   };
   return (
     <span
-      className={`rounded-full border px-2 py-0.5 text-xs capitalize ${styles[status] ?? ''}`}
+      className={`rounded-full border px-2 py-0.5 text-xs ${styles[status] ?? ''}`}
     >
-      {status}
+      {t.alertStatus[status] ?? status}
     </span>
   );
 }
@@ -233,7 +234,7 @@ function AlertActions({
           <button
             type="submit"
             className="rounded px-2 py-0.5 text-xs hover:bg-accent"
-            title="Mark as read"
+            title={t.alerts.markAsRead}
           >
             ✓
           </button>
@@ -245,7 +246,7 @@ function AlertActions({
           <button
             type="submit"
             className="rounded px-2 py-0.5 text-xs hover:bg-accent"
-            title="Dismiss"
+            title={t.alerts.dismiss}
           >
             ✕
           </button>
@@ -256,7 +257,7 @@ function AlertActions({
         <button
           type="submit"
           className="rounded px-2 py-0.5 text-xs hover:bg-accent"
-          title={muted ? 'Unmute' : 'Mute'}
+          title={muted ? t.alerts.unmute : t.alerts.mute}
         >
           {muted ? '🔔' : '🔕'}
         </button>

@@ -3,6 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
+import { t } from '../../../../lib/i18n';
 
 interface NotificationPreferences {
   s1InApp: boolean;
@@ -74,7 +75,7 @@ export default function SettingsNotificationsPage() {
   if (!loaded) {
     return (
       <div className="p-6 md:p-8">
-        <p className="text-muted-foreground">Loading preferences…</p>
+        <p className="text-muted-foreground">{t.settings.notifications.loadingPrefs}</p>
       </div>
     );
   }
@@ -82,82 +83,82 @@ export default function SettingsNotificationsPage() {
   return (
     <div className="p-6 md:p-8 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Notification Settings</h1>
+        <h1 className="text-2xl font-bold">{t.settings.notifications.title}</h1>
         <p className="mt-1 text-muted-foreground">
-          Configure alert and notification preferences.
+          {t.settings.notifications.subtitle}
         </p>
       </div>
 
       <div className="max-w-lg space-y-6">
         {/* Alert channel matrix */}
         <div className="rounded-lg border bg-card p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Alert Channels</h2>
+          <h2 className="text-lg font-semibold">{t.settings.notifications.alertChannels}</h2>
           <p className="text-xs text-muted-foreground">
-            Choose how you receive alerts for each severity level.
+            {t.settings.notifications.channelDesc}
           </p>
 
           {/* Header */}
           <div className="grid grid-cols-4 gap-2 text-xs font-medium text-muted-foreground">
             <span />
-            <span className="text-center">In-App</span>
-            <span className="text-center">Email</span>
-            <span className="text-center">Push</span>
+            <span className="text-center">{t.settings.notifications.inApp}</span>
+            <span className="text-center">{t.settings.notifications.email}</span>
+            <span className="text-center">{t.settings.notifications.push}</span>
           </div>
 
           {/* S1 */}
           <div className="grid grid-cols-4 gap-2 items-center">
             <div>
-              <p className="text-sm font-medium">S1 — Critical</p>
-              <p className="text-xs text-muted-foreground">Must interrupt</p>
+              <p className="text-sm font-medium">{t.settings.notifications.s1Critical}</p>
+              <p className="text-xs text-muted-foreground">{t.settings.notifications.s1Desc}</p>
             </div>
             <ChannelToggle checked={prefs.s1InApp} onToggle={() => toggle('s1InApp')} />
-            <ChannelToggle checked={prefs.s1Email} onToggle={() => toggle('s1Email')} disabled label="Soon" />
-            <ChannelToggle checked={prefs.s1Push} onToggle={() => toggle('s1Push')} disabled label="Soon" />
+            <ChannelToggle checked={prefs.s1Email} onToggle={() => toggle('s1Email')} disabled label={t.settings.notifications.soon} />
+            <ChannelToggle checked={prefs.s1Push} onToggle={() => toggle('s1Push')} disabled label={t.settings.notifications.soon} />
           </div>
 
           {/* S2 */}
           <div className="grid grid-cols-4 gap-2 items-center">
             <div>
-              <p className="text-sm font-medium">S2 — High Priority</p>
-              <p className="text-xs text-muted-foreground">Can be batched</p>
+              <p className="text-sm font-medium">{t.settings.notifications.s2HighPriority}</p>
+              <p className="text-xs text-muted-foreground">{t.settings.notifications.s2Desc}</p>
             </div>
             <ChannelToggle checked={prefs.s2InApp} onToggle={() => toggle('s2InApp')} />
-            <ChannelToggle checked={prefs.s2Email} onToggle={() => toggle('s2Email')} disabled label="Soon" />
-            <ChannelToggle checked={prefs.s2Push} onToggle={() => toggle('s2Push')} disabled label="Soon" />
+            <ChannelToggle checked={prefs.s2Email} onToggle={() => toggle('s2Email')} disabled label={t.settings.notifications.soon} />
+            <ChannelToggle checked={prefs.s2Push} onToggle={() => toggle('s2Push')} disabled label={t.settings.notifications.soon} />
           </div>
 
           {/* S3 */}
           <div className="grid grid-cols-4 gap-2 items-center">
             <div>
-              <p className="text-sm font-medium">S3 — Standard</p>
-              <p className="text-xs text-muted-foreground">In-app only</p>
+              <p className="text-sm font-medium">{t.settings.notifications.s3Standard}</p>
+              <p className="text-xs text-muted-foreground">{t.settings.notifications.s3Desc}</p>
             </div>
             <ChannelToggle checked={prefs.s3InApp} onToggle={() => toggle('s3InApp')} />
-            <ChannelToggle checked={prefs.s3Email} onToggle={() => toggle('s3Email')} disabled label="Soon" />
-            <ChannelToggle checked={prefs.s3Push} onToggle={() => toggle('s3Push')} disabled label="Soon" />
+            <ChannelToggle checked={prefs.s3Email} onToggle={() => toggle('s3Email')} disabled label={t.settings.notifications.soon} />
+            <ChannelToggle checked={prefs.s3Push} onToggle={() => toggle('s3Push')} disabled label={t.settings.notifications.soon} />
           </div>
         </div>
 
         {/* Muted tickers */}
         <div className="rounded-lg border bg-card p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Muted Tickers</h2>
+          <h2 className="text-lg font-semibold">{t.settings.notifications.mutedTickers}</h2>
           <p className="text-xs text-muted-foreground">
-            Comma-separated list of tickers to suppress alerts for.
+            {t.settings.notifications.mutedTickersDesc}
           </p>
           <input
             type="text"
             value={mutedInput}
             onChange={(e) => setMutedInput(e.target.value)}
             className="w-full rounded-md border bg-background px-3 py-2 text-sm font-mono"
-            placeholder="e.g. AAPL, TSLA, MSFT"
+            placeholder={t.settings.notifications.mutedPlaceholder}
           />
         </div>
 
         {/* Briefing delivery */}
         <div className="rounded-lg border bg-card p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Briefing Delivery</h2>
+          <h2 className="text-lg font-semibold">{t.settings.notifications.briefingDelivery}</h2>
           <p className="text-sm text-muted-foreground">
-            Briefing delivery preferences will be configurable in Phase 4.
+            {t.settings.notifications.briefingDeliveryDesc}
           </p>
         </div>
 
@@ -167,7 +168,7 @@ export default function SettingsNotificationsPage() {
           disabled={saving}
           className="rounded-md bg-foreground px-4 py-2 text-sm font-medium text-background hover:bg-foreground/90 disabled:opacity-50"
         >
-          {saving ? 'Saving…' : 'Save Preferences'}
+          {saving ? t.settings.notifications.saving : t.settings.notifications.save}
         </button>
       </div>
     </div>

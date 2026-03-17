@@ -3,9 +3,9 @@ import { AuthProvider } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MarketBrain — AI-Native Investment Research',
+  title: 'MarketBrain — AI 原生投资研究',
   description:
-    'AI-powered investment research workstation: pre-market briefings, real-time alerts, interactive research.',
+    'AI 驱动的投资研究工作站：盘前简报、实时告警、交互式研究。',
   manifest: '/manifest.json',
   applicationName: 'MarketBrain',
   appleWebApp: {
@@ -28,7 +28,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="zh-CN">
       <head>
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
