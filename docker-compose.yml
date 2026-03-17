@@ -1,0 +1,25 @@
+# ──────────────────────────────────────────────────────
+# MarketBrain — Local Development Stack
+# Usage: docker compose up -d
+# ──────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: marketbrain
+      POSTGRES_PASSWORD: marketbrain_dev
+      POSTGRES_DB: marketbrain
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketbrain"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

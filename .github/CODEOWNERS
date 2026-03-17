@@ -1,0 +1,11 @@
+# Default reviewers
+* @macaulishchina
+
+# AI system — requires explicit review
+packages/ai/ @macaulishchina
+packages/domain/ @macaulishchina
+
+# Infrastructure
+.github/ @macaulishchina
+docker-compose.yml @macaulishchina
+Dockerfile.* @macaulishchina

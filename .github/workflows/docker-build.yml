@@ -1,0 +1,22 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build web image
+        run: docker build -f Dockerfile.web -t marketbrain-web:${{ github.sha }} .
+
+  build-worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build worker image
+        run: docker build -f Dockerfile.worker -t marketbrain-worker:${{ github.sha }} .

@@ -1,0 +1,25 @@
+{
+  "name": "@marketbrain/worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx trigger.dev@latest dev",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@trigger.dev/sdk": "^3.3.0",
+    "@marketbrain/config": "workspace:*",
+    "@marketbrain/domain": "workspace:*",
+    "@marketbrain/db": "workspace:*",
+    "@marketbrain/ai": "workspace:*",
+    "@marketbrain/observability": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}
