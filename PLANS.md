@@ -1,77 +1,85 @@
-# Execution Plan — Phase 1: Basic Business Skeleton
+# Execution Plan — Phase 2: 盘前早报 v0
 
-> Build the non-AI business foundation: auth, core data models, app shell, API routes.
+> Build the AI execution layer and deliver the first end-to-end briefing workflow.
 
 ## Goal
 
-- Auth.js (NextAuth v5) integration with credential + OAuth providers
-- Full Prisma schema per StartFromHere.md §6 (all v1 entities)
-- Domain Zod schemas aligned with Prisma models
-- App shell layout (sidebar + mobile nav)
-- Base UI components (Button, Card, Input, Badge, Dialog)
-- Filled page skeletons with real layouts
-- BFF API routes for auth, instruments, watchlists
+- Model Gateway with AI SDK, supporting OpenAI / Anthropic / Google providers
+- Prompt Registry with versioned templates for extraction and briefing composition
+- AI-specific schemas for event extraction and briefing composition
+- Tool contracts for document search, price snapshot, etc.
+- Worker tasks: event extraction, briefing composition, briefing publish
+- Briefing generation API + enhanced briefing pages
+- First evaluator set (factuality, citation coverage)
+- Guardrails for publish gate (evidence check, confidence threshold)
 
 ## Why Now
 
-- Phase 0 scaffold is committed and verified.
-- Phase 1 establishes the "non-AI" foundation that all subsequent phases depend on.
+- Phase 1 established all data models, auth, app shell, and page skeletons.
+- Phase 2 closes the first AI-driven loop: documents → events → briefing → user.
 
 ## Constraints
 
-- Schema-first: define Zod schemas and Prisma models before implementation.
-- No AI/model calls in this phase.
-- All env vars through `@marketbrain/config`.
-- No `process.env` outside config package.
-- No business logic in UI — keep in `packages/domain`.
-- Keep route handlers thin.
-- Type annotations on all exported functions.
+- Schema-first: AI output schemas defined before prompts.
+- Evidence-first: no briefing item without evidence IDs.
+- Eval-first: prompt changes paired with fixtures/evaluators.
+- All model calls server-side only (worker or Route Handlers).
+- Prompts are versioned repo assets in `packages/ai/src/prompts/`.
+- Business guardrails live in `packages/domain`, not in `packages/ai`.
 
 ## Non-Goals
 
-- AI model gateway implementation (Phase 2).
-- Real-time alerts / WebSocket (Phase 4+).
-- E2E tests (Phase 3+).
+- Real-time alert workflow (Phase 3).
+- Interactive research chat (Phase 4).
+- Full multi-model routing with cost optimization (Phase 5).
+- Data source connectors / real external data ingestion.
 
 ## Affected Areas
 
-- `packages/db/prisma/schema.prisma` — expand to all v1 entities
-- `packages/domain/src/` — new Zod schemas + enums for all entities
-- `packages/config/src/env.ts` — add AUTH_SECRET, AUTH_GOOGLE_ID, AUTH_GOOGLE_SECRET
-- `apps/web/` — Auth.js, app shell layout, API routes, filled pages
-- `packages/ui/src/` — base components
+- `packages/ai/src/` — gateway, prompts, schemas, tools, evaluators, router
+- `packages/domain/src/` — scoring helpers, guardrails
+- `apps/worker/src/` — briefing workflow tasks
+- `apps/web/` — briefing generation API, enhanced briefing pages
+- `packages/db/` — repository helpers if needed
 
 ## Steps
 
-1. Expand Prisma schema with all v1 entities, run migration.
-2. Add domain Zod schemas + new enums aligned with Prisma models.
-3. Integrate Auth.js with credentials provider + session middleware.
-4. Build base UI components in packages/ui.
-5. Build app shell layout (sidebar nav, mobile bottom nav).
-6. Fill page skeletons, add API routes.
-7. Run full verification.
+1. Install AI SDK + provider dependencies in packages/ai.
+2. Build Model Gateway (provider adapters, extractObject, streamAnswer, judge).
+3. Build AI-specific schemas (event extraction output, briefing composition output).
+4. Build Prompt Registry with versioned templates (extraction, briefing compose).
+5. Build tool contracts (search-documents, get-price-snapshot).
+6. Build worker tasks (extract-events, compose-briefing, publish-briefing).
+7. Build domain guardrails + scoring helpers.
+8. Build briefing generation API + enhance briefing pages.
+9. Build first evaluator set + fixtures.
+10. Verification: typecheck, test, build, commit.
 
 ## Verification
 
-- `pnpm install` succeeds
 - `pnpm turbo typecheck` — all pass
-- `pnpm turbo test` — all pass
+- `pnpm turbo test` — all pass (including new AI/evaluator tests)
 - `pnpm turbo build` — all pass
-- Auth flow works (login/logout)
-- DB migration applies cleanly
+- Model gateway unit tests with mock providers
+- Briefing workflow integration test with fixture data
 
 ## Progress Log
 
-- `done` — Step 1: Prisma schema expansion (25 models, 25 tables)
-- `done` — Step 2: Domain schemas (19 Zod schemas, 10+ enums, 11 tests)
-- `done` — Step 3: Auth.js integration (Credentials + Google, middleware, session helpers)
-- `done` — Step 4: UI components (Button, Card, Input, Badge, Dialog, Sidebar)
-- `done` — Step 5: App shell layout (desktop sidebar + mobile bottom nav)
-- `done` — Step 6: Pages + API routes (12 pages, 3 API routes, seed script)
-- `done` — Step 7: Verification (typecheck ✅, test ✅, build ✅, seed ✅)
+- `done` — Step 1: Install AI SDK deps (ai@6.0.116, @ai-sdk/openai/anthropic/google)
+- `done` — Step 2: Model Gateway (ModelGateway class + provider adapters)
+- `done` — Step 3: AI schemas (eventExtraction, briefingComposition, judge)
+- `done` — Step 4: Prompt Registry (3 versioned prompts: extract, briefing, judge)
+- `done` — Step 5: Tool contracts (searchDocuments, getPriceSnapshot, getCompanyProfile)
+- `done` — Step 6: Worker tasks (extract-events, compose-briefing, generate-briefing)
+- `done` — Step 7: Domain guardrails + scoring (materiality/relevance/rank, briefing gates)
+- `done` — Step 8: Briefing API + enhanced pages (generate route, admin button, evidence display)
+- `done` — Step 9: Evaluators + fixtures (factuality, citation-coverage, headline-quality + 59 tests)
+- `done` — Step 10: Verification (typecheck ✅ 8/8, test ✅ 8/8 63 tests, build ✅ 2/2)
 
 ## Decisions
 
-- Use Auth.js v5 (next-auth@5) with Prisma adapter for session persistence.
-- Credentials provider for dev, Google OAuth as first external provider.
-- Keep auth config server-side only per web.md rules.
+- Use AI SDK (ai package) as unified provider interface for OpenAI/Anthropic/Google.
+- Prompt templates stored as TypeScript objects with version tracking.
+- Worker tasks use Trigger.dev SDK for queue, retry, and monitoring.
+- Briefing publish gate requires: all items have evidenceIds, confidenceScore >= threshold.
+- Evaluators run against fixture data, not live APIs, for deterministic testing.
