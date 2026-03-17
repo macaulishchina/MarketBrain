@@ -6,6 +6,7 @@
  */
 
 export const LOCALE = 'zh-CN' as const;
+const TZ = 'Asia/Shanghai';
 
 // ---------------------------------------------------------------------------
 // Date / Time helpers
@@ -16,7 +17,7 @@ export function formatDate(
   options?: Intl.DateTimeFormatOptions,
 ): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleDateString(LOCALE, options);
+  return d.toLocaleDateString(LOCALE, { timeZone: TZ, ...options });
 }
 
 export function formatDateLong(date: Date | string): string {
@@ -39,12 +40,12 @@ export function formatDateShort(date: Date | string): string {
 
 export function formatTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleTimeString(LOCALE);
+  return d.toLocaleTimeString(LOCALE, { timeZone: TZ });
 }
 
 export function formatDateTime(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  return d.toLocaleString(LOCALE);
+  return d.toLocaleString(LOCALE, { timeZone: TZ });
 }
 
 // ---------------------------------------------------------------------------

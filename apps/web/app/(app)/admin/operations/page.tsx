@@ -208,7 +208,7 @@ export default function AdminOperationsPage() {
                 {calls.map((c) => (
                   <tr key={c.id} className="border-b last:border-0">
                     <td className="p-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(c.createdAt).toLocaleString('zh-CN')}
+                      {new Date(c.createdAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
                     </td>
                     <td className="p-3 capitalize">{c.provider}</td>
                     <td className="p-3 font-mono text-xs">{c.model}</td>

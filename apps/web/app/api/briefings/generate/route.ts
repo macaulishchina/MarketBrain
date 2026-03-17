@@ -11,6 +11,7 @@ import {
   type ProviderConfig,
   briefingCompositionSchema,
 } from '@marketbrain/ai';
+import { fetchQuotes, formatQuotesForPrompt } from '../../../../lib/market-data';
 
 const generateBodySchema = z.object({
   market: z.string().min(1).max(10).default('US'),
@@ -97,6 +98,12 @@ export async function POST(request: NextRequest) {
     });
     const watchlistTickers = watchlistItems.map((i) => i.instrument.ticker);
 
+    // Fetch REAL market data for watchlist + major indices
+    const majorIndices = ['^GSPC', '^DJI', '^IXIC', '^VIX'];
+    const allTickers = [...new Set([...watchlistTickers, ...majorIndices])];
+    const quotes = await fetchQuotes(allTickers);
+    const marketDataContext = formatQuotesForPrompt(quotes);
+
     // Fetch recent documents if any exist
     const since = new Date(Date.now() - 48 * 60 * 60 * 1000);
     const documents = await prisma.document.findMany({
@@ -112,18 +119,23 @@ export async function POST(request: NextRequest) {
             .join('\n\n')
         : '';
 
-    const prompt = `Compose a pre-market briefing for the ${market} market on ${tradingDate}.
+    const now = new Date();
+    const beijingTime = now.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
 
+    const prompt = `Compose a pre-market briefing for the ${market} market on ${tradingDate}.
+当前时间（北京时间）: ${beijingTime}
+
+${marketDataContext ? `${marketDataContext}\n\n` : ''}
 ${watchlistTickers.length > 0 ? `User watchlist: ${watchlistTickers.join(', ')}\n` : ''}
 ${docContext ? `Recent news documents:\n\n${docContext}\n\n` : ''}
-${!docContext ? 'No ingested documents available. Use your general knowledge of current market conditions to produce a useful briefing based on well-known recent events and macro trends.\n' : ''}
-Synthesize into a ranked briefing with 4-8 items. Each item must have a clear headline, why it matters, what to watch, affected tickers, and at least one evidence quote or reasoning.`;
+${!docContext ? '无已入库新闻文档。请结合上方的实时行情数据，分析当前市场状况和最近的重要事件，生成有实际参考价值的盘前简报。\n' : ''}
+Synthesize into a ranked briefing with 4-8 items. Each item must have a clear headline, why it matters, what to watch, affected tickers, and at least one evidence quote or reasoning. 引用实际的行情数据作为证据。`;
 
     const result = await gateway.extractObject({
       taskType: 'compose_briefing',
       schema: briefingCompositionSchema,
       prompt,
-      system: `You are a pre-market briefing composer for professional investors. Output actionable, evidence-backed briefing items ranked by importance. Each headline must be under 200 characters. IMPORTANT: All output text (headlines, summaries, analysis) MUST be written in Chinese (简体中文). Ticker symbols and proper nouns may remain in English.`,
+      system: `You are a pre-market briefing composer for professional investors. Output actionable, evidence-backed briefing items ranked by importance. Each headline must be under 200 characters. IMPORTANT: All output text (headlines, summaries, analysis) MUST be written in Chinese (简体中文). Ticker symbols and proper nouns may remain in English. 你会收到实时行情数据，请务必在分析中引用真实的价格、涨跌幅等数据。证据引用（evidenceQuotes）必须包含具体的数字和数据点。`,
     });
 
     // Delete old items for this briefing (in case of regeneration)

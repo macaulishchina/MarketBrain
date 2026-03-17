@@ -16,6 +16,7 @@ import {
 import { gateResearchAnswer, computeResearchQuality } from '@marketbrain/domain';
 import { z } from 'zod';
 import { featureFlags } from '@marketbrain/config';
+import { fetchQuotes } from '../../../../../lib/market-data';
 
 const sendMessageSchema = z.object({
   content: z.string().min(1).max(5000),
@@ -126,14 +127,23 @@ export async function POST(
   const priceSnapshots: Array<{ ticker: string; price: number; changePercent: number }> = [];
   const companyProfiles: Array<{ ticker: string; name: string; sector: string | null }> = [];
 
+  // Fetch real market data for tickers that need price snapshots
+  if (intent.toolsNeeded.includes('get_price_snapshot') && intent.tickers.length > 0) {
+    const quotes = await fetchQuotes(intent.tickers);
+    for (const q of quotes) {
+      priceSnapshots.push({
+        ticker: q.ticker,
+        price: q.price,
+        changePercent: q.changePercent,
+      });
+    }
+  }
+
   for (const ticker of intent.tickers) {
     const instrument = await prisma.instrument.findFirst({
       where: { ticker: { equals: ticker, mode: 'insensitive' } },
     });
     if (instrument) {
-      if (intent.toolsNeeded.includes('get_price_snapshot')) {
-        priceSnapshots.push({ ticker: instrument.ticker, price: 0, changePercent: 0 });
-      }
       if (intent.toolsNeeded.includes('get_company_profile')) {
         companyProfiles.push({
           ticker: instrument.ticker,

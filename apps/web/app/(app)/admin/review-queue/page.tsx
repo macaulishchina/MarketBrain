@@ -95,7 +95,7 @@ export default function AdminReviewQueuePage() {
                   {item.itemType.replace('_', ' ')}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(item.createdAt).toLocaleString('zh-CN')}
+                  {new Date(item.createdAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
                 </span>
                 {item.reviewer && (
                   <span className="text-xs text-muted-foreground ml-auto">

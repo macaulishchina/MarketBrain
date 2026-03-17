@@ -116,7 +116,7 @@ export default function AdminEvalsPage() {
                   {c.taskType}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(c.createdAt).toLocaleDateString('zh-CN')}
+                  {new Date(c.createdAt).toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })}
                 </span>
                 <span className="text-xs text-muted-foreground ml-auto">
                   {c.runs.length} run{c.runs.length !== 1 ? 's' : ''}
@@ -148,7 +148,7 @@ export default function AdminEvalsPage() {
                           {r.promptVersion}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {new Date(r.createdAt).toLocaleDateString('zh-CN')}
+                          {new Date(r.createdAt).toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })}
                         </span>
                         {r.notes && (
                           <span className="text-xs text-muted-foreground truncate max-w-48">

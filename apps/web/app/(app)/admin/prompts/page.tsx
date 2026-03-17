@@ -75,7 +75,7 @@ export default async function AdminPromptsPage() {
                       </span>
                     </td>
                     <td className="p-3 text-xs text-muted-foreground">
-                      {new Date(t.updatedAt).toLocaleDateString('zh-CN')}
+                      {new Date(t.updatedAt).toLocaleDateString('zh-CN', { timeZone: 'Asia/Shanghai' })}
                     </td>
                   </tr>
                 ))}
@@ -110,7 +110,7 @@ export default async function AdminPromptsPage() {
                             {v.active ? 'Active' : 'Inactive'}
                           </span>
                           <span className="text-xs text-muted-foreground ml-auto">
-                            {new Date(v.updatedAt).toLocaleString('zh-CN')}
+                            {new Date(v.updatedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })}
                           </span>
                         </div>
                         {v.template && (
