@@ -15,6 +15,9 @@ import {
   evalAlertPrecision,
   evalResearchCompleteness,
   evalResearchEvidenceQuality,
+  estimateCost,
+  ModelGateway,
+  type ModelCallRecord,
   type ComposedBriefingItem,
   type EventExtraction,
   type AlertCard,
@@ -702,5 +705,110 @@ describe('@marketbrain/ai research support', () => {
       const result = evalResearchEvidenceQuality(lowConf);
       expect(result.details.some((d) => d.includes('Low average evidence confidence'))).toBe(true);
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Cost Estimation
+// ---------------------------------------------------------------------------
+
+describe('estimateCost', () => {
+  it('calculates cost for gpt-4o-mini correctly', () => {
+    // gpt-4o-mini: $0.15 / 1M input, $0.6 / 1M output
+    const cost = estimateCost('gpt-4o-mini', 1_000_000, 1_000_000);
+    expect(cost).toBeCloseTo(0.15 + 0.6);
+  });
+
+  it('calculates cost for gpt-4o correctly', () => {
+    // gpt-4o: $2.5 / 1M input, $10 / 1M output
+    const cost = estimateCost('gpt-4o', 500_000, 100_000);
+    expect(cost).toBeCloseTo(2.5 * 0.5 + 10.0 * 0.1);
+  });
+
+  it('uses default rates for unknown models', () => {
+    // Unknown: $1.0 / 1M input, $3.0 / 1M output
+    const cost = estimateCost('unknown-model', 1_000_000, 1_000_000);
+    expect(cost).toBeCloseTo(1.0 + 3.0);
+  });
+
+  it('returns 0 for zero tokens', () => {
+    expect(estimateCost('gpt-4o', 0, 0)).toBe(0);
+  });
+
+  it('handles small token counts proportionally', () => {
+    // 1000 input tokens of gpt-4o: 1000 * 2.5 / 1_000_000 = 0.0025
+    const cost = estimateCost('gpt-4o', 1000, 0);
+    expect(cost).toBeCloseTo(0.0025);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 5 — ModelGateway fallback + call logging
+// ---------------------------------------------------------------------------
+
+describe('ModelGateway', () => {
+  it('throws when the only provider is not enabled', async () => {
+    const gw = new ModelGateway({
+      defaultProvider: 'openai',
+      providers: {
+        openai: { apiKey: 'test', enabled: false },
+      },
+    });
+
+    await expect(
+      gw.extractObject({
+        taskType: 'classify',
+        schema: {} as any,
+        prompt: 'test',
+        options: { noFallback: true },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('exports ModelCallRecord type interface fields', () => {
+    const record: ModelCallRecord = {
+      provider: 'openai',
+      model: 'gpt-4o',
+      taskType: 'classify',
+      promptVersion: 'v1',
+      inputTokens: 100,
+      outputTokens: 50,
+      latencyMs: 200,
+      estimatedCost: 0.001,
+      resultStatus: 'success',
+    };
+    expect(record.provider).toBe('openai');
+    expect(record.resultStatus).toBe('success');
+    expect(record.error).toBeUndefined();
+  });
+
+  it('ModelCallRecord accepts error field for failures', () => {
+    const record: ModelCallRecord = {
+      provider: 'anthropic',
+      model: 'claude-sonnet-4-20250514',
+      taskType: 'extract',
+      promptVersion: 'v2',
+      inputTokens: 0,
+      outputTokens: 0,
+      latencyMs: 50,
+      estimatedCost: 0,
+      resultStatus: 'error',
+      error: 'Rate limit exceeded',
+    };
+    expect(record.resultStatus).toBe('error');
+    expect(record.error).toBe('Rate limit exceeded');
+  });
+
+  it('constructs with valid config', () => {
+    const gw = new ModelGateway({
+      defaultProvider: 'openai',
+      providers: {
+        openai: { apiKey: 'test-key', enabled: true },
+        anthropic: { apiKey: 'test-key-2', enabled: true },
+      },
+      fallbackOrder: ['openai', 'anthropic', 'google'],
+      onModelCall: () => {},
+    });
+    expect(gw).toBeInstanceOf(ModelGateway);
   });
 });

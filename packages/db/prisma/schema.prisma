@@ -31,6 +31,7 @@ model User {
   researchSessions ResearchSession[]
   accounts         Account[]
   sessions         Session[]
+  reviewItems      ReviewItem[]
 
   @@map("users")
 }
@@ -426,4 +427,26 @@ model EvalRun {
   evalCase EvalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
   @@map("eval_runs")
+}
+
+// ══════════════════════════════════════════════════════════════
+// §Phase 5 — Review Queue
+// ══════════════════════════════════════════════════════════════
+
+model ReviewItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  itemType    String   @map("item_type") // 'briefing_item' | 'alert' | 'research_answer'
+  itemId      String   @map("item_id")   // ID of the source item
+  reason      String   @db.Text           // Why it needs review (gate failures, low confidence, etc.)
+  status      String   @default("pending") // 'pending' | 'approved' | 'rejected'
+  reviewedBy  String?  @map("reviewed_by") @db.Uuid
+  reviewedAt  DateTime? @map("reviewed_at")
+  reviewNotes String?  @map("review_notes") @db.Text
+  snapshot    Json?                       // Snapshot of the item at review time
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  reviewer User? @relation(fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@map("review_items")
 }

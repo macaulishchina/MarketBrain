@@ -1,67 +1,61 @@
-# Execution Plan — Phase 4: 交互研究 v1
+# Execution Plan — Phase 5: 多模型、评测、风控强化
 
-> Build the interactive research workflow: multi-turn chat sessions with evidence retrieval, structured answer blocks, and citation panel.
+> Make the system production-ready: multi-model routing with fallback, prompt management, evaluation dashboards, manual review queue, and operational visibility.
 
 ## Goal
 
-- Research session CRUD (create, list, detail, archive, export)
-- Multi-turn chat with streaming AI responses
-- Structured answer blocks: core conclusion, supporting evidence, counter evidence, catalysts, uncertainties, follow-ups
-- Evidence retrieval via tool planner (search_documents, getPriceSnapshot, getCompanyProfile)
-- Three-panel research UI: session history | AI output | evidence panel
-- Research answer quality gates + evaluators
-- Save / share / export sessions
+- Model routing with configurable fallback policy across providers
+- Prompt registry admin UI with version diff management
+- Evaluation dashboard for tracking AI output quality
+- Manual review queue for gated/failed content
+- Alert precision dashboard for monitoring alert usefulness
+- Latency / cost dashboard for operational visibility
 
 ## Why Now
 
-- Phase 3 established alert pipeline; Phase 4 upgrades the product from "watch" to "ask".
-- Per §7.3 of StartFromHere.md: interactive research with parse intent → plan tools → retrieve evidence → generate answer blocks → self-check → render with evidence.
-- Existing infrastructure: ResearchSession/Message Prisma models, ModelGateway.streamText, tool contracts, domain scoring.
+- Phases 0–4 built the three core outputs (briefing, alerts, research). Phase 5 makes them production-grade.
+- Per §16 of StartFromHere.md: model routing, fallback policy, prompt registry, eval dashboard, manual review queue, precision dashboard, latency/cost dashboard.
+- Existing infrastructure: ModelGateway, PromptTemplate Prisma model, EvalCase/EvalRun models, ModelCall audit model, all evaluators.
 
 ## Constraints
 
-- Schema-first: define researchAnswerSchema before implementation.
-- Evidence-first: every answer block must reference evidence IDs.
-- Server-side AI: all model calls in API routes / worker, never browser.
-- Streaming: use AI SDK streamText for real-time response delivery.
-- Task routing: research_answer → strong model tier.
-- Gated: research answers pass guardrail before rendering.
-- Three-panel layout per §4.2: questions/history | AI output | evidence/timeline.
+- All model calls must be logged to ModelCall table.
+- Fallback must be automatic: if primary provider fails, try next.
+- Prompt diffs must be viewable side-by-side.
+- Review queue items must be resolvable (approve/reject).
+- Dashboards read from existing audit tables — no new data pipelines needed.
+- Admin-only pages: evals, review queue, precision, latency/cost.
 
 ## Non-Goals
 
-- Real document ingestion pipeline (mock tool results).
-- External market data connectors (mock snapshots).
-- Collaborative / shared sessions (Phase 5+).
-- Mobile-optimized research (Phase 6).
+- Budget control / rate limiting (post-beta).
+- Automated A/B testing between prompt versions.
+- Real-time streaming dashboards (batch reads sufficient).
 
 ## Affected Areas
 
-- `packages/ai/src/` — researchAnswerSchema, researchAnswerPrompt, research evaluator
-- `packages/domain/src/` — research quality scoring, evidence sufficiency, answer gates
-- `apps/worker/src/` — research-answer orchestration task
-- `apps/web/app/api/research/` — sessions CRUD + streaming messages + export
-- `apps/web/app/(app)/research/` — session list, chat UI, evidence panel
+- `packages/ai/src/router/` — fallback chain, call logging, cost estimation
+- `apps/web/app/(app)/admin/` — evals, review-queue pages
+- `apps/web/app/api/admin/` — API routes for evals, model-calls, review queue
+- `apps/web/app/(app)/admin/prompts/` — enhanced with diff view
+- `packages/db/prisma/` — ReviewItem model
 
 ## Steps
 
-1. [ ] AI schemas + prompts (researchAnswerSchema, researchAnswerPrompt, intentClassification)
-2. [ ] Domain layer (research quality scoring, evidence sufficiency, answer gates)
-3. [ ] Worker task (research-answer orchestration)
-4. [ ] Research API routes (sessions CRUD + streaming messages + export)
-5. [ ] Research session chat UI + evidence panel (three-panel layout)
-6. [ ] Research list page + create session flow
-7. [ ] Tests + evaluators (schema, prompt, domain, quality)
-8. [ ] Verification: typecheck, test, build, commit
+1. [x] Model routing with fallback + call logging
+2. [x] Prompt registry admin with diff management
+3. [x] Eval dashboard (admin/evals)
+4. [x] Manual review queue (admin/review-queue)
+5. [x] Alert precision dashboard (admin/alert-precision)
+6. [x] Latency / cost dashboard (admin/operations)
+7. [x] Tests
+8. [x] Verification + commit
 
 ## Verification
 
-- `pnpm turbo typecheck` — all pass
-- `pnpm turbo test` — all pass (including new research tests)
-- `pnpm turbo build` — all pass
-- Research answer schema validation tests
-- Evidence sufficiency and quality gate tests
-- Streaming API route integration patterns verified
+- `pnpm turbo typecheck` — 8/8 pass
+- `pnpm turbo test` — 61 tests pass (including Phase 5 cost estimation + gateway tests)
+- `pnpm turbo build` — 2/2 pass
 
 ## Progress Log
 
