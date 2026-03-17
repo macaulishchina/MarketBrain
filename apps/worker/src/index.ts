@@ -5,3 +5,4 @@ export * from './tasks/generate-briefing';
 export * from './tasks/classify-event';
 export * from './tasks/generate-alert';
 export * from './tasks/deliver-alerts';
+export * from './tasks/research-answer';

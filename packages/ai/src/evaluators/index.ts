@@ -5,7 +5,7 @@
  * for monitoring and regression detection. They run offline or in test suites.
  */
 
-import type { ComposedBriefingItem, EventExtraction, AlertCard } from '../schemas/index';
+import type { ComposedBriefingItem, EventExtraction, AlertCard, ResearchAnswer } from '../schemas/index';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -181,4 +181,100 @@ export function evalAlertPrecision(feedback: AlertFeedback[]): EvalResult {
   }
 
   return { name: 'alert-precision', score, details };
+}
+
+// ---------------------------------------------------------------------------
+// Research Answer Completeness Evaluator
+// ---------------------------------------------------------------------------
+
+/**
+ * Measures how complete a research answer is by checking for all required blocks.
+ * Score = fraction of blocks that are non-empty and substantive.
+ */
+export function evalResearchCompleteness(answer: ResearchAnswer): EvalResult {
+  const details: string[] = [];
+  let present = 0;
+  const total = 6;
+
+  if (answer.coreConclusion.trim().length >= 20) {
+    present++;
+  } else {
+    details.push('Core conclusion is missing or too short');
+  }
+
+  if (answer.supportingEvidence.length >= 1) {
+    present++;
+  } else {
+    details.push('No supporting evidence provided');
+  }
+
+  if (answer.counterEvidence.length >= 1) {
+    present++;
+  } else {
+    details.push('No counter evidence provided (consider adding balanced view)');
+  }
+
+  if (answer.catalysts.length >= 1) {
+    present++;
+  } else {
+    details.push('No catalysts identified');
+  }
+
+  if (answer.uncertainties.length >= 1) {
+    present++;
+  } else {
+    details.push('No uncertainties acknowledged');
+  }
+
+  if (answer.followUps.length >= 1) {
+    present++;
+  } else {
+    details.push('No follow-up questions suggested');
+  }
+
+  return { name: 'research-completeness', score: present / total, details };
+}
+
+// ---------------------------------------------------------------------------
+// Research Evidence Quality Evaluator
+// ---------------------------------------------------------------------------
+
+/**
+ * Measures evidence quality in a research answer:
+ * - Each evidence block has a non-empty quote
+ * - Each evidence block has a source
+ * - Average confidence of supporting evidence
+ */
+export function evalResearchEvidenceQuality(answer: ResearchAnswer): EvalResult {
+  const details: string[] = [];
+  const allEvidence = [...answer.supportingEvidence, ...answer.counterEvidence];
+
+  if (allEvidence.length === 0) {
+    return { name: 'research-evidence-quality', score: 0, details: ['No evidence blocks'] };
+  }
+
+  let quality = 0;
+  let totalConfidence = 0;
+
+  for (const ev of allEvidence) {
+    let blockScore = 0;
+    if (ev.quote.trim().length >= 10) blockScore += 0.4;
+    else details.push(`Short quote: "${ev.claim.slice(0, 40)}…"`);
+
+    if (ev.source.trim().length > 0) blockScore += 0.3;
+    else details.push(`Missing source for: "${ev.claim.slice(0, 40)}…"`);
+
+    blockScore += ev.confidence * 0.3;
+    totalConfidence += ev.confidence;
+    quality += blockScore;
+  }
+
+  const score = quality / allEvidence.length;
+  const avgConfidence = totalConfidence / allEvidence.length;
+
+  if (avgConfidence < 0.5) {
+    details.push(`Low average evidence confidence: ${avgConfidence.toFixed(2)}`);
+  }
+
+  return { name: 'research-evidence-quality', score, details };
 }

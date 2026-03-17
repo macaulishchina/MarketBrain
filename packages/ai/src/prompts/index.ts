@@ -208,6 +208,125 @@ Generate a concise alert card for this event.`,
 };
 
 // ---------------------------------------------------------------------------
+// Research Answer Prompt
+// ---------------------------------------------------------------------------
+
+export interface ResearchInput {
+  question: string;
+  mode: string;
+  tickers: string[];
+  conversationHistory: Array<{ role: string; content: string }>;
+  retrievedEvidence: Array<{ source: string; text: string }>;
+  priceSnapshots?: Array<{ ticker: string; price: number; changePercent: number }>;
+  companyProfiles?: Array<{ ticker: string; name: string; sector: string | null }>;
+}
+
+export const researchAnswerPrompt: PromptTemplate<ResearchInput> = {
+  taskType: 'research_answer',
+  version: '1.0.0',
+  name: 'research-answer-v1',
+  system: `You are a professional investment research analyst. Your job is to answer financial research questions with structured, evidence-based analysis.
+
+Rules:
+- Every claim in your answer MUST be backed by evidence from the provided sources.
+- Present both supporting AND counter evidence when available.
+- Be explicit about uncertainties — do NOT present speculation as fact.
+- Identify upcoming catalysts that could change the thesis.
+- Suggest follow-up questions for deeper research.
+- Keep the core conclusion concise but complete.
+- If evidence is insufficient to answer confidently, say so clearly.
+- Do NOT hallucinate facts, figures, or quotes not in the provided evidence.
+- Use exact quotes from sources when citing evidence.`,
+
+  buildUserMessage: (input) => {
+    const parts: string[] = [`Research question: ${input.question}`, `Mode: ${input.mode}`];
+
+    if (input.tickers.length > 0) {
+      parts.push(`Tickers: ${input.tickers.join(', ')}`);
+    }
+
+    if (input.priceSnapshots && input.priceSnapshots.length > 0) {
+      parts.push(
+        '\nPrice data:\n' +
+          input.priceSnapshots
+            .map((p) => `${p.ticker}: $${p.price} (${p.changePercent > 0 ? '+' : ''}${p.changePercent.toFixed(2)}%)`)
+            .join('\n'),
+      );
+    }
+
+    if (input.companyProfiles && input.companyProfiles.length > 0) {
+      parts.push(
+        '\nCompany profiles:\n' +
+          input.companyProfiles
+            .map((c) => `${c.ticker} — ${c.name} (${c.sector ?? 'unknown sector'})`)
+            .join('\n'),
+      );
+    }
+
+    if (input.retrievedEvidence.length > 0) {
+      parts.push(
+        '\nRetrieved evidence:\n' +
+          input.retrievedEvidence
+            .map((e, i) => `[Doc ${i + 1}: ${e.source}]\n${e.text}`)
+            .join('\n\n'),
+      );
+    }
+
+    if (input.conversationHistory.length > 0) {
+      parts.push(
+        '\nConversation history:\n' +
+          input.conversationHistory
+            .map((m) => `${m.role}: ${m.content}`)
+            .join('\n'),
+      );
+    }
+
+    parts.push('\nProvide a structured research answer with evidence-backed analysis.');
+
+    return parts.join('\n');
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Intent Classification Prompt
+// ---------------------------------------------------------------------------
+
+export interface IntentClassificationInput {
+  question: string;
+  availableTickers: string[];
+}
+
+export const intentClassificationPrompt: PromptTemplate<IntentClassificationInput> = {
+  taskType: 'classify',
+  version: '1.0.0',
+  name: 'intent-classification-v1',
+  system: `You are a research intent classifier. Given a user's financial research question, determine:
+1. The research mode (single_instrument, theme, comparison, freeform).
+2. Any specific tickers mentioned.
+3. Key topics to investigate.
+4. Which tools are needed (search_documents, get_price_snapshot, get_company_profile).
+5. Concrete search queries to gather evidence (max 5).
+
+Rules:
+- "single_instrument" when the question is about one specific stock/company.
+- "comparison" when comparing two or more instruments.
+- "theme" when asking about a sector, macro trend, or investment thesis.
+- "freeform" for general market questions or broad queries.
+- Always include search_documents — evidence retrieval is mandatory.
+- Add get_price_snapshot if the question involves current prices, valuations, or movement.
+- Add get_company_profile if company fundamentals are relevant.`,
+
+  buildUserMessage: (input) =>
+    `Classify the research intent for this question:
+
+"${input.question}"
+
+${input.availableTickers.length > 0 ? `Known tickers in system: ${input.availableTickers.join(', ')}` : ''}
+
+Determine the mode, tickers, topics, tools needed, and search queries.`,
+};
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -227,6 +346,8 @@ register(eventExtractionPrompt);
 register(briefingCompositionPrompt);
 register(judgePrompt);
 register(alertGenerationPrompt);
+register(researchAnswerPrompt);
+register(intentClassificationPrompt);
 
 /** Get a prompt by task type and version. Defaults to latest. */
 export function getPrompt<TInput = unknown>(

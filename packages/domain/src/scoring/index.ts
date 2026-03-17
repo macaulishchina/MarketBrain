@@ -170,6 +170,51 @@ export function isCoolingDown(
 }
 
 // ---------------------------------------------------------------------------
+// Research Answer Quality Score
+// ---------------------------------------------------------------------------
+
+export interface ResearchQualityInput {
+  evidenceCount: number;
+  hasCounterEvidence: boolean;
+  hasCatalysts: boolean;
+  hasUncertainties: boolean;
+  avgEvidenceConfidence: number;
+}
+
+/**
+ * Composite research answer quality: weighted blend of evidence depth and balance.
+ * Returns 0-1.
+ */
+export function computeResearchQuality(input: ResearchQualityInput): number {
+  const evidenceDepth = clamp(Math.min(input.evidenceCount, 5) / 5);
+  const balance =
+    (input.hasCounterEvidence ? 0.3 : 0) +
+    (input.hasCatalysts ? 0.2 : 0) +
+    (input.hasUncertainties ? 0.2 : 0);
+  const confidence = clamp(input.avgEvidenceConfidence);
+
+  return clamp(evidenceDepth * 0.4 + balance * 0.3 + confidence * 0.3);
+}
+
+// ---------------------------------------------------------------------------
+// Evidence Sufficiency Check
+// ---------------------------------------------------------------------------
+
+export interface EvidenceSufficiencyInput {
+  supportingCount: number;
+  minRequired: number;
+  avgConfidence: number;
+}
+
+/**
+ * Check if enough evidence has been gathered to produce a reliable answer.
+ * Returns true if evidence meets minimum thresholds.
+ */
+export function isEvidenceSufficient(input: EvidenceSufficiencyInput): boolean {
+  return input.supportingCount >= input.minRequired && input.avgConfidence >= 0.3;
+}
+
+// ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
 

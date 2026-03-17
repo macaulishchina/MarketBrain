@@ -20,6 +20,9 @@ import {
   isDuplicate,
   isCoolingDown,
   gateAlert,
+  computeResearchQuality,
+  isEvidenceSufficient,
+  gateResearchAnswer,
 } from '../src/index';
 
 describe('@marketbrain/domain enums', () => {
@@ -608,6 +611,225 @@ describe('@marketbrain/domain alert guardrails', () => {
 
     it('passes at confidence boundary (0.3)', () => {
       const result = gateAlert({ ...validAlert, confidenceScore: 0.3 });
+      expect(result.passed).toBe(true);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Research Quality Scoring
+// ---------------------------------------------------------------------------
+
+describe('@marketbrain/domain research scoring', () => {
+  describe('computeResearchQuality', () => {
+    it('returns high score for comprehensive answer', () => {
+      const score = computeResearchQuality({
+        evidenceCount: 5,
+        hasCounterEvidence: true,
+        hasCatalysts: true,
+        hasUncertainties: true,
+        avgEvidenceConfidence: 0.9,
+      });
+      expect(score).toBeGreaterThan(0.8);
+    });
+
+    it('returns lower score for thin evidence', () => {
+      const score = computeResearchQuality({
+        evidenceCount: 1,
+        hasCounterEvidence: false,
+        hasCatalysts: false,
+        hasUncertainties: false,
+        avgEvidenceConfidence: 0.5,
+      });
+      expect(score).toBeLessThan(0.4);
+    });
+
+    it('returns 0 for no evidence and no balance', () => {
+      const score = computeResearchQuality({
+        evidenceCount: 0,
+        hasCounterEvidence: false,
+        hasCatalysts: false,
+        hasUncertainties: false,
+        avgEvidenceConfidence: 0,
+      });
+      expect(score).toBe(0);
+    });
+
+    it('caps evidence depth at 5 items', () => {
+      const score5 = computeResearchQuality({
+        evidenceCount: 5,
+        hasCounterEvidence: true,
+        hasCatalysts: true,
+        hasUncertainties: true,
+        avgEvidenceConfidence: 0.8,
+      });
+      const score10 = computeResearchQuality({
+        evidenceCount: 10,
+        hasCounterEvidence: true,
+        hasCatalysts: true,
+        hasUncertainties: true,
+        avgEvidenceConfidence: 0.8,
+      });
+      expect(score5).toBe(score10);
+    });
+
+    it('rewards balanced analysis', () => {
+      const balanced = computeResearchQuality({
+        evidenceCount: 3,
+        hasCounterEvidence: true,
+        hasCatalysts: true,
+        hasUncertainties: true,
+        avgEvidenceConfidence: 0.7,
+      });
+      const unbalanced = computeResearchQuality({
+        evidenceCount: 3,
+        hasCounterEvidence: false,
+        hasCatalysts: false,
+        hasUncertainties: false,
+        avgEvidenceConfidence: 0.7,
+      });
+      expect(balanced).toBeGreaterThan(unbalanced);
+    });
+  });
+
+  describe('isEvidenceSufficient', () => {
+    it('returns true when evidence meets thresholds', () => {
+      expect(isEvidenceSufficient({
+        supportingCount: 2,
+        minRequired: 1,
+        avgConfidence: 0.7,
+      })).toBe(true);
+    });
+
+    it('returns false when count below minimum', () => {
+      expect(isEvidenceSufficient({
+        supportingCount: 0,
+        minRequired: 1,
+        avgConfidence: 0.8,
+      })).toBe(false);
+    });
+
+    it('returns false when confidence below 0.3', () => {
+      expect(isEvidenceSufficient({
+        supportingCount: 3,
+        minRequired: 1,
+        avgConfidence: 0.2,
+      })).toBe(false);
+    });
+
+    it('passes at confidence boundary (0.3)', () => {
+      expect(isEvidenceSufficient({
+        supportingCount: 1,
+        minRequired: 1,
+        avgConfidence: 0.3,
+      })).toBe(true);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Research Answer Gate
+// ---------------------------------------------------------------------------
+
+describe('@marketbrain/domain research guardrails', () => {
+  const validResearchAnswer = {
+    coreConclusion: 'Apple shows strong fundamentals driven by services growth and iPhone loyalty.',
+    supportingEvidence: [
+      {
+        claim: 'Services revenue grew 17% YoY',
+        quote: 'Apple reported services revenue of $23.1 billion, up 17% year-over-year.',
+        source: 'Q1 2025 Earnings Report',
+        confidence: 0.9,
+      },
+    ],
+    counterEvidence: [
+      {
+        claim: 'China revenue declining',
+        quote: 'Greater China revenue fell 13% to $20.8 billion.',
+        source: 'Q1 2025 Earnings Report',
+        confidence: 0.88,
+      },
+    ],
+    catalysts: ['WWDC 2025 AI announcements'],
+    uncertainties: ['Regulatory pressure in EU'],
+    followUps: ['How does services margin compare to hardware?'],
+  };
+
+  describe('gateResearchAnswer', () => {
+    it('passes valid research answer', () => {
+      const result = gateResearchAnswer(validResearchAnswer);
+      expect(result.passed).toBe(true);
+      expect(result.failures).toHaveLength(0);
+    });
+
+    it('fails for missing conclusion', () => {
+      const result = gateResearchAnswer({
+        ...validResearchAnswer,
+        coreConclusion: '',
+      });
+      expect(result.passed).toBe(false);
+      expect(result.failures[0]).toContain('too short');
+    });
+
+    it('fails for very short conclusion', () => {
+      const result = gateResearchAnswer({
+        ...validResearchAnswer,
+        coreConclusion: 'Short.',
+      });
+      expect(result.passed).toBe(false);
+    });
+
+    it('fails for no supporting evidence', () => {
+      const result = gateResearchAnswer({
+        ...validResearchAnswer,
+        supportingEvidence: [],
+      });
+      expect(result.passed).toBe(false);
+      expect(result.failures.some((f) => f.includes('supporting evidence'))).toBe(true);
+    });
+
+    it('fails for evidence with empty quote', () => {
+      const result = gateResearchAnswer({
+        ...validResearchAnswer,
+        supportingEvidence: [{
+          claim: 'Revenue grew',
+          quote: '',
+          source: 'Report',
+          confidence: 0.8,
+        }],
+      });
+      expect(result.passed).toBe(false);
+      expect(result.failures.some((f) => f.includes('missing quote'))).toBe(true);
+    });
+
+    it('fails for very low confidence evidence', () => {
+      const result = gateResearchAnswer({
+        ...validResearchAnswer,
+        supportingEvidence: [{
+          claim: 'Revenue grew',
+          quote: 'Apple reported $23B in revenue.',
+          source: 'Report',
+          confidence: 0.1,
+        }],
+      });
+      expect(result.passed).toBe(false);
+      expect(result.failures.some((f) => f.includes('low confidence'))).toBe(true);
+    });
+
+    it('fails for conclusion over 1000 chars', () => {
+      const result = gateResearchAnswer({
+        ...validResearchAnswer,
+        coreConclusion: 'A'.repeat(1001),
+      });
+      expect(result.passed).toBe(false);
+      expect(result.failures.some((f) => f.includes('1000 characters'))).toBe(true);
+    });
+
+    it('passes with only supporting evidence (no counter)', () => {
+      const result = gateResearchAnswer({
+        ...validResearchAnswer,
+        counterEvidence: [],
+      });
       expect(result.passed).toBe(true);
     });
   });

@@ -6,15 +6,20 @@ import {
   briefingCompositionSchema,
   judgeResultSchema,
   alertCardSchema,
+  researchAnswerSchema,
+  researchIntentSchema,
   getPrompt,
   evalFactuality,
   evalCitationCoverage,
   evalHeadlineQuality,
   evalAlertPrecision,
+  evalResearchCompleteness,
+  evalResearchEvidenceQuality,
   type ComposedBriefingItem,
   type EventExtraction,
   type AlertCard,
   type AlertFeedback,
+  type ResearchAnswer,
 } from '../src/index';
 
 // ---------------------------------------------------------------------------
@@ -459,6 +464,243 @@ describe('@marketbrain/ai alert support', () => {
     it('returns 0 for no feedback', () => {
       const result = evalAlertPrecision([]);
       expect(result.score).toBe(0);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Research Schemas
+// ---------------------------------------------------------------------------
+
+describe('@marketbrain/ai research support', () => {
+  const validResearchAnswer: ResearchAnswer = {
+    coreConclusion: 'Apple shows strong fundamentals driven by services growth and iPhone loyalty.',
+    supportingEvidence: [
+      {
+        claim: 'Services revenue grew 17% YoY',
+        quote: 'Apple reported services revenue of $23.1 billion, up 17% year-over-year.',
+        source: 'Q1 2025 Earnings Report',
+        confidence: 0.9,
+      },
+      {
+        claim: 'iPhone market share remains dominant',
+        quote: 'iPhone captured 57% of US smartphone market in Q4.',
+        source: 'IDC Market Report',
+        confidence: 0.85,
+      },
+    ],
+    counterEvidence: [
+      {
+        claim: 'China revenue declining',
+        quote: 'Greater China revenue fell 13% to $20.8 billion.',
+        source: 'Q1 2025 Earnings Report',
+        confidence: 0.88,
+      },
+    ],
+    catalysts: ['WWDC 2025 AI announcements', 'India manufacturing expansion'],
+    uncertainties: ['Regulatory pressure in EU on App Store fees'],
+    followUps: ['How does services margin compare to hardware?', 'What is the AI strategy timeline?'],
+  };
+
+  describe('researchAnswerSchema', () => {
+    it('accepts valid research answer', () => {
+      const result = researchAnswerSchema.safeParse(validResearchAnswer);
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects answer without supporting evidence', () => {
+      const result = researchAnswerSchema.safeParse({
+        ...validResearchAnswer,
+        supportingEvidence: [],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('accepts answer with empty counter evidence', () => {
+      const result = researchAnswerSchema.safeParse({
+        ...validResearchAnswer,
+        counterEvidence: [],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects core conclusion over 1000 chars', () => {
+      const result = researchAnswerSchema.safeParse({
+        ...validResearchAnswer,
+        coreConclusion: 'A'.repeat(1001),
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('researchIntentSchema', () => {
+    it('accepts valid intent classification', () => {
+      const result = researchIntentSchema.safeParse({
+        mode: 'single_instrument',
+        tickers: ['AAPL'],
+        topics: ['earnings', 'services growth'],
+        toolsNeeded: ['search_documents', 'get_price_snapshot'],
+        searchQueries: ['AAPL Q1 2025 earnings', 'Apple services revenue growth'],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects more than 5 search queries', () => {
+      const result = researchIntentSchema.safeParse({
+        mode: 'freeform',
+        tickers: [],
+        topics: ['test'],
+        toolsNeeded: ['search_documents'],
+        searchQueries: ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('accepts comparison mode with multiple tickers', () => {
+      const result = researchIntentSchema.safeParse({
+        mode: 'comparison',
+        tickers: ['AAPL', 'MSFT', 'GOOGL'],
+        topics: ['cloud', 'AI strategy'],
+        toolsNeeded: ['search_documents', 'get_company_profile'],
+        searchQueries: ['AAPL vs MSFT cloud revenue'],
+      });
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('research prompts', () => {
+    it('retrieves research_answer prompt', () => {
+      const prompt = getPrompt('research_answer');
+      expect(prompt.taskType).toBe('research_answer');
+      expect(prompt.version).toBe('1.0.0');
+      expect(prompt.system).toContain('investment research analyst');
+    });
+
+    it('builds research user message with evidence', () => {
+      const prompt = getPrompt<{
+        question: string;
+        mode: string;
+        tickers: string[];
+        conversationHistory: Array<{ role: string; content: string }>;
+        retrievedEvidence: Array<{ source: string; text: string }>;
+      }>('research_answer');
+
+      const msg = prompt.buildUserMessage({
+        question: 'What is the bull case for AAPL?',
+        mode: 'single_instrument',
+        tickers: ['AAPL'],
+        conversationHistory: [],
+        retrievedEvidence: [
+          { source: 'Earnings Report', text: 'Revenue grew 8% YoY.' },
+        ],
+      });
+
+      expect(msg).toContain('What is the bull case for AAPL?');
+      expect(msg).toContain('Earnings Report');
+      expect(msg).toContain('Revenue grew 8% YoY');
+    });
+
+    it('retrieves intent classification prompt', () => {
+      const prompt = getPrompt('classify', '1.0.0');
+      expect(prompt.taskType).toBe('classify');
+      expect(prompt.system).toContain('research intent classifier');
+    });
+  });
+
+  describe('evalResearchCompleteness', () => {
+    it('returns 1.0 for fully complete answer', () => {
+      const result = evalResearchCompleteness(validResearchAnswer);
+      expect(result.name).toBe('research-completeness');
+      expect(result.score).toBe(1);
+      expect(result.details).toHaveLength(0);
+    });
+
+    it('returns partial score for missing sections', () => {
+      const incomplete: ResearchAnswer = {
+        ...validResearchAnswer,
+        counterEvidence: [],
+        catalysts: [],
+        uncertainties: [],
+      };
+      const result = evalResearchCompleteness(incomplete);
+      expect(result.score).toBe(3 / 6); // conclusion + supporting + followUps
+      expect(result.details.length).toBe(3);
+    });
+
+    it('penalizes too-short conclusion', () => {
+      const result = evalResearchCompleteness({
+        ...validResearchAnswer,
+        coreConclusion: 'Short.',
+      });
+      expect(result.score).toBeLessThan(1);
+      expect(result.details).toContain('Core conclusion is missing or too short');
+    });
+
+    it('returns 0 for empty answer', () => {
+      const empty: ResearchAnswer = {
+        coreConclusion: '',
+        supportingEvidence: [],
+        counterEvidence: [],
+        catalysts: [],
+        uncertainties: [],
+        followUps: [],
+      };
+      const result = evalResearchCompleteness(empty);
+      expect(result.score).toBe(0);
+    });
+  });
+
+  describe('evalResearchEvidenceQuality', () => {
+    it('returns high score for well-sourced evidence', () => {
+      const result = evalResearchEvidenceQuality(validResearchAnswer);
+      expect(result.name).toBe('research-evidence-quality');
+      expect(result.score).toBeGreaterThan(0.7);
+    });
+
+    it('returns 0 for answer with no evidence', () => {
+      const result = evalResearchEvidenceQuality({
+        ...validResearchAnswer,
+        supportingEvidence: [],
+        counterEvidence: [],
+      });
+      expect(result.score).toBe(0);
+    });
+
+    it('penalizes short quotes', () => {
+      const badEvidence: ResearchAnswer = {
+        ...validResearchAnswer,
+        supportingEvidence: [
+          { claim: 'Revenue grew', quote: 'yes', source: 'Report', confidence: 0.8 },
+        ],
+        counterEvidence: [],
+      };
+      const result = evalResearchEvidenceQuality(badEvidence);
+      expect(result.score).toBeLessThan(0.7);
+      expect(result.details.some((d) => d.includes('Short quote'))).toBe(true);
+    });
+
+    it('penalizes missing sources', () => {
+      const noSource: ResearchAnswer = {
+        ...validResearchAnswer,
+        supportingEvidence: [
+          { claim: 'Revenue grew 17%', quote: 'Apple reported $23B in services.', source: '', confidence: 0.8 },
+        ],
+        counterEvidence: [],
+      };
+      const result = evalResearchEvidenceQuality(noSource);
+      expect(result.details.some((d) => d.includes('Missing source'))).toBe(true);
+    });
+
+    it('flags low average confidence', () => {
+      const lowConf: ResearchAnswer = {
+        ...validResearchAnswer,
+        supportingEvidence: [
+          { claim: 'Something', quote: 'A quote from some source document.', source: 'Doc', confidence: 0.2 },
+        ],
+        counterEvidence: [],
+      };
+      const result = evalResearchEvidenceQuality(lowConf);
+      expect(result.details.some((d) => d.includes('Low average evidence confidence'))).toBe(true);
     });
   });
 });

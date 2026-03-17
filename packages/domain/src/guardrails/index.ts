@@ -137,3 +137,50 @@ export function gateAlert(item: AlertCandidate): GateResult {
 
   return { passed: failures.length === 0, failures };
 }
+
+// ---------------------------------------------------------------------------
+// Research Answer Gate
+// ---------------------------------------------------------------------------
+
+export interface ResearchAnswerCandidate {
+  coreConclusion: string;
+  supportingEvidence: Array<{ claim: string; quote: string; source: string; confidence: number }>;
+  counterEvidence: Array<{ claim: string; quote: string; source: string; confidence: number }>;
+  catalysts: string[];
+  uncertainties: string[];
+  followUps: string[];
+}
+
+/**
+ * Gate a research answer before rendering to the user.
+ * Ensures minimum quality: non-empty conclusion, at least one evidence block,
+ * and no dangerously low confidence evidence.
+ */
+export function gateResearchAnswer(answer: ResearchAnswerCandidate): GateResult {
+  const failures: string[] = [];
+
+  if (!answer.coreConclusion || answer.coreConclusion.trim().length < 20) {
+    failures.push('Core conclusion is missing or too short (min 20 chars)');
+  }
+
+  if (answer.supportingEvidence.length === 0) {
+    failures.push('At least one supporting evidence block is required');
+  }
+
+  for (const ev of answer.supportingEvidence) {
+    if (!ev.quote || ev.quote.trim().length === 0) {
+      failures.push(`Supporting evidence for "${ev.claim.slice(0, 40)}" missing quote`);
+    }
+    if (ev.confidence < 0.2) {
+      failures.push(
+        `Supporting evidence for "${ev.claim.slice(0, 40)}" has very low confidence (${ev.confidence})`,
+      );
+    }
+  }
+
+  if (answer.coreConclusion && answer.coreConclusion.length > 1000) {
+    failures.push('Core conclusion exceeds 1000 characters');
+  }
+
+  return { passed: failures.length === 0, failures };
+}

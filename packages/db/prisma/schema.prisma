@@ -229,7 +229,7 @@ model DocumentChunk {
 
 model Evidence {
   id           String   @id @default(uuid()) @db.Uuid
-  documentId   String   @map("document_id") @db.Uuid
+  documentId   String?  @map("document_id") @db.Uuid
   chunkId      String?  @map("chunk_id") @db.Uuid
   quote        String   @db.Text
   locator      String?
@@ -237,7 +237,7 @@ model Evidence {
   confidence   Float    @default(0.5)
   createdAt    DateTime @default(now()) @map("created_at")
 
-  document Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  document Document?      @relation(fields: [documentId], references: [id], onDelete: SetNull)
   chunk    DocumentChunk? @relation(fields: [chunkId], references: [id], onDelete: SetNull)
 
   @@map("evidence")

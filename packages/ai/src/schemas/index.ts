@@ -143,3 +143,59 @@ export const alertCardSchema = z.object({
 });
 
 export type AlertCard = z.infer<typeof alertCardSchema>;
+
+// ---------------------------------------------------------------------------
+// Research answer output — structured answer blocks for interactive research
+// ---------------------------------------------------------------------------
+
+/** A single evidence block within a research answer. */
+export const researchEvidenceBlockSchema = z.object({
+  claim: z.string().describe('The specific claim being supported'),
+  quote: z.string().describe('Verbatim quote from source'),
+  source: z.string().describe('Source document or tool name'),
+  confidence: z.number().min(0).max(1).describe('Confidence in this evidence'),
+});
+
+export type ResearchEvidenceBlock = z.infer<typeof researchEvidenceBlockSchema>;
+
+/** Full structured answer from the research model. */
+export const researchAnswerSchema = z.object({
+  coreConclusion: z.string().max(1000).describe('The main answer to the user question'),
+  supportingEvidence: z
+    .array(researchEvidenceBlockSchema)
+    .min(1)
+    .describe('Evidence supporting the conclusion'),
+  counterEvidence: z
+    .array(researchEvidenceBlockSchema)
+    .describe('Evidence that contradicts or qualifies the conclusion'),
+  catalysts: z
+    .array(z.string().max(300))
+    .describe('Key upcoming catalysts that could change the picture'),
+  uncertainties: z
+    .array(z.string().max(300))
+    .describe('Areas of uncertainty or insufficient evidence'),
+  followUps: z
+    .array(z.string().max(200))
+    .describe('Suggested follow-up questions for deeper analysis'),
+});
+
+export type ResearchAnswer = z.infer<typeof researchAnswerSchema>;
+
+// ---------------------------------------------------------------------------
+// Intent classification output — parse user query into research plan
+// ---------------------------------------------------------------------------
+
+export const researchIntentSchema = z.object({
+  mode: z.enum(['single_instrument', 'theme', 'comparison', 'freeform']),
+  tickers: z.array(z.string()).describe('Tickers mentioned in the query'),
+  topics: z.array(z.string()).describe('Key topics or themes to investigate'),
+  toolsNeeded: z
+    .array(z.enum(['search_documents', 'get_price_snapshot', 'get_company_profile']))
+    .describe('Which tools the research plan should use'),
+  searchQueries: z
+    .array(z.string())
+    .max(5)
+    .describe('Concrete search queries to gather evidence'),
+});
+
+export type ResearchIntent = z.infer<typeof researchIntentSchema>;
