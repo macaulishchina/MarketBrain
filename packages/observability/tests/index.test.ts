@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { logger, initTracing } from '../src/index.js';
+import { logger, initTracing } from '../src/index';
 
 describe('@marketbrain/observability', () => {
   it('exports logger', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { TaskType, modelCallSchema } from '../src/index.js';
+import { TaskType, modelCallSchema } from '../src/index';
 
 describe('@marketbrain/ai', () => {
   it('exports TaskType constants', () => {

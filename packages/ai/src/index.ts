@@ -1,2 +1,2 @@
-export * from './schemas/index.js';
-export * from './router/index.js';
+export * from './schemas/index';
+export * from './router/index';

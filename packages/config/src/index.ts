@@ -1,2 +1,2 @@
-export { env, type Env } from './env.js';
-export { featureFlags, type FeatureFlag } from './feature-flags.js';
+export { env, type Env } from './env';
+export { featureFlags, type FeatureFlag } from './feature-flags';

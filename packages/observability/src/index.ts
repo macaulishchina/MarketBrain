@@ -1,2 +1,2 @@
-export { logger, type Logger } from './logger.js';
-export { initTracing } from './tracing.js';
+export { logger, type Logger } from './logger';
+export { initTracing } from './tracing';

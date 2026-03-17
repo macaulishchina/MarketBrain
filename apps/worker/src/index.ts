@@ -1,1 +1,1 @@
-export * from './tasks/health-check.js';
+export * from './tasks/health-check';

@@ -1,23 +1,429 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [vector]
 }
 
-// ── User & Organization ────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// §6.1 User & Organization
+// ══════════════════════════════════════════════════════════════
 
 model User {
+  id                      String    @id @default(uuid()) @db.Uuid
+  email                   String    @unique
+  name                    String
+  avatar                  String?
+  role                    String    @default("viewer")
+  locale                  String    @default("en")
+  timezone                String    @default("UTC")
+  notificationPreferences Json      @default("{}")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  memberships      Membership[]
+  watchlists       Watchlist[]
+  alerts           Alert[]
+  researchSessions ResearchSession[]
+  accounts         Account[]
+  sessions         Session[]
+
+  @@map("users")
+}
+
+model Organization {
   id        String   @id @default(uuid()) @db.Uuid
-  email     String   @unique
   name      String
-  role      String   @default("viewer")
-  locale    String   @default("en")
-  timezone  String   @default("UTC")
+  plan      String   @default("free")
+  settings  Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("users")
+  memberships Membership[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  userId         String       @map("user_id") @db.Uuid
+  organizationId String       @map("organization_id") @db.Uuid
+  role           String       @default("viewer")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@id([userId, organizationId])
+  @@map("memberships")
+}
+
+// ── Auth.js models ─────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(uuid()) @db.Uuid
+  userId            String  @map("user_id") @db.Uuid
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Uuid
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id") @db.Uuid
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ══════════════════════════════════════════════════════════════
+// §6.2 Investment Objects
+// ══════════════════════════════════════════════════════════════
+
+model Instrument {
+  id        String   @id @default(uuid()) @db.Uuid
+  ticker    String
+  name      String
+  exchange  String?
+  assetType String   @map("asset_type") @default("stock")
+  country   String?
+  sector    String?
+  industry  String?
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  watchlistItems   WatchlistItem[]
+  eventInstruments EventInstrument[]
+
+  @@unique([ticker, exchange])
+  @@map("instruments")
+}
+
+model Theme {
+  id          String   @id @default(uuid()) @db.Uuid
+  slug        String   @unique
+  name        String
+  description String?
+  status      String   @default("active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("themes")
+}
+
+model Watchlist {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items WatchlistItem[]
+
+  @@map("watchlists")
+}
+
+model WatchlistItem {
+  id           String   @id @default(uuid()) @db.Uuid
+  watchlistId  String   @map("watchlist_id") @db.Uuid
+  instrumentId String   @map("instrument_id") @db.Uuid
+  rank         Int      @default(0)
+  note         String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  watchlist  Watchlist  @relation(fields: [watchlistId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([watchlistId, instrumentId])
+  @@map("watchlist_items")
+}
+
+// ══════════════════════════════════════════════════════════════
+// §6.3 Sources & Evidence
+// ══════════════════════════════════════════════════════════════
+
+model Source {
+  id         String   @id @default(uuid()) @db.Uuid
+  type       String
+  name       String
+  baseUrl    String?  @map("base_url")
+  trustLevel Int      @default(50) @map("trust_level")
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  documents Document[]
+
+  @@map("sources")
+}
+
+model Document {
+  id            String    @id @default(uuid()) @db.Uuid
+  sourceId      String    @map("source_id") @db.Uuid
+  externalId    String?   @map("external_id")
+  title         String
+  url           String?
+  publishedAt   DateTime? @map("published_at")
+  fetchedAt     DateTime  @default(now()) @map("fetched_at")
+  language      String    @default("en")
+  mimeType      String    @default("text/plain") @map("mime_type")
+  hash          String?
+  rawText       String?   @map("raw_text") @db.Text
+  rawObjectPath String?   @map("raw_object_path")
+  metadata      Json      @default("{}")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  source   Source          @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  chunks   DocumentChunk[]
+  evidence Evidence[]
+
+  @@unique([sourceId, externalId])
+  @@map("documents")
+}
+
+model DocumentChunk {
+  id         String                       @id @default(uuid()) @db.Uuid
+  documentId String                       @map("document_id") @db.Uuid
+  chunkIndex Int                          @map("chunk_index")
+  text       String                       @db.Text
+  tokenCount Int                          @default(0) @map("token_count")
+  embedding  Unsupported("vector(1536)")?
+  metadata   Json                         @default("{}")
+
+  document Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  evidence Evidence[]
+
+  @@unique([documentId, chunkIndex])
+  @@map("document_chunks")
+}
+
+model Evidence {
+  id           String   @id @default(uuid()) @db.Uuid
+  documentId   String   @map("document_id") @db.Uuid
+  chunkId      String?  @map("chunk_id") @db.Uuid
+  quote        String   @db.Text
+  locator      String?
+  evidenceType String   @map("evidence_type")
+  confidence   Float    @default(0.5)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  document Document       @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunk    DocumentChunk? @relation(fields: [chunkId], references: [id], onDelete: SetNull)
+
+  @@map("evidence")
+}
+
+// ══════════════════════════════════════════════════════════════
+// §6.4 Events & Outputs
+// ══════════════════════════════════════════════════════════════
+
+model Event {
+  id              String    @id @default(uuid()) @db.Uuid
+  type            String
+  status          String    @default("draft")
+  title           String
+  summary         String?   @db.Text
+  occurredAt      DateTime? @map("occurred_at")
+  firstSeenAt     DateTime  @default(now()) @map("first_seen_at")
+  importanceScore Float     @default(0) @map("importance_score")
+  confidenceScore Float     @default(0) @map("confidence_score")
+  noveltyScore    Float     @default(0) @map("novelty_score")
+  publishable     Boolean   @default(false)
+  metadata        Json      @default("{}")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  instruments  EventInstrument[]
+  briefingItems BriefingItem[]
+  alerts       Alert[]
+
+  @@map("events")
+}
+
+model EventInstrument {
+  eventId          String @map("event_id") @db.Uuid
+  instrumentId     String @map("instrument_id") @db.Uuid
+  relationType     String @default("related") @map("relation_type")
+  impactDirection  String? @map("impact_direction")
+  impactConfidence Float?  @map("impact_confidence")
+
+  event      Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  instrument Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, instrumentId])
+  @@map("event_instruments")
+}
+
+model Briefing {
+  id                String   @id @default(uuid()) @db.Uuid
+  market            String
+  tradingDate       DateTime @map("trading_date") @db.Date
+  status            String   @default("generating")
+  generatedAt       DateTime? @map("generated_at")
+  promptVersion     String?  @map("prompt_version")
+  modelRouteVersion String?  @map("model_route_version")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  items BriefingItem[]
+
+  @@unique([market, tradingDate])
+  @@map("briefings")
+}
+
+model BriefingItem {
+  id           String @id @default(uuid()) @db.Uuid
+  briefingId   String @map("briefing_id") @db.Uuid
+  eventId      String @map("event_id") @db.Uuid
+  rank         Int    @default(0)
+  headline     String
+  whyItMatters String @map("why_it_matters") @db.Text
+  whatToWatch   String @map("what_to_watch") @db.Text
+  evidenceIds  Json   @default("[]") @map("evidence_ids")
+
+  briefing Briefing @relation(fields: [briefingId], references: [id], onDelete: Cascade)
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@map("briefing_items")
+}
+
+model Alert {
+  id        String    @id @default(uuid()) @db.Uuid
+  eventId   String    @map("event_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  severity  String    @default("s3")
+  channel   String    @default("in_app")
+  status    String    @default("pending")
+  sentAt    DateTime? @map("sent_at")
+  clickedAt DateTime? @map("clicked_at")
+  muted     Boolean   @default(false)
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("alerts")
+}
+
+// ══════════════════════════════════════════════════════════════
+// §6.5 Research Sessions & AI Audit
+// ══════════════════════════════════════════════════════════════
+
+model ResearchSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  title     String?
+  mode      String   @default("freeform")
+  query     String?  @db.Text
+  status    String   @default("active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages ResearchMessage[]
+
+  @@map("research_sessions")
+}
+
+model ResearchMessage {
+  id             String   @id @default(uuid()) @db.Uuid
+  sessionId      String   @map("session_id") @db.Uuid
+  role           String
+  content        String   @db.Text
+  renderedBlocks Json     @default("[]") @map("rendered_blocks")
+  evidenceIds    Json     @default("[]") @map("evidence_ids")
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  session ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("research_messages")
+}
+
+model PromptTemplate {
+  id        String   @id @default(uuid()) @db.Uuid
+  taskType  String   @map("task_type")
+  name      String
+  version   String
+  template  String   @db.Text
+  schema    Json     @default("{}")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([taskType, version])
+  @@map("prompt_templates")
+}
+
+model ModelCall {
+  id              String   @id @default(uuid()) @db.Uuid
+  provider        String
+  model           String
+  taskType        String   @map("task_type")
+  promptVersion   String   @map("prompt_version")
+  inputTokens     Int      @default(0) @map("input_tokens")
+  outputTokens    Int      @default(0) @map("output_tokens")
+  latencyMs       Int      @default(0) @map("latency_ms")
+  cost            Float?
+  resultStatus    String   @default("success") @map("result_status")
+  rawResponsePath String?  @map("raw_response_path")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@map("model_calls")
+}
+
+model EvalCase {
+  id          String   @id @default(uuid()) @db.Uuid
+  taskType    String   @map("task_type")
+  input       Json
+  expected    Json
+  gradingRule String   @map("grading_rule") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  runs EvalRun[]
+
+  @@map("eval_cases")
+}
+
+model EvalRun {
+  id                String   @id @default(uuid()) @db.Uuid
+  caseId            String   @map("case_id") @db.Uuid
+  promptVersion     String   @map("prompt_version")
+  modelRouteVersion String   @map("model_route_version")
+  score             Float
+  notes             String?  @db.Text
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  evalCase EvalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@map("eval_runs")
 }

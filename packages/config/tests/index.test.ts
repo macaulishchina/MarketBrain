@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { featureFlags } from '../src/feature-flags.js';
+import { featureFlags } from '../src/feature-flags';
 
 describe('@marketbrain/config', () => {
   it('exports featureFlags', () => {

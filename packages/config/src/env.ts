@@ -10,6 +10,8 @@ const envSchema = z.object({
   // Auth
   NEXTAUTH_URL: z.string().url().optional(),
   NEXTAUTH_SECRET: z.string().min(32).optional(),
+  AUTH_GOOGLE_ID: z.string().optional(),
+  AUTH_GOOGLE_SECRET: z.string().optional(),
 
   // AI Providers (all optional in Phase 0)
   OPENAI_API_KEY: z.string().optional(),
