@@ -35,37 +35,42 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const market = parsed.data.market;
-  const tradingDate = parsed.data.tradingDate ?? new Date().toISOString().split('T')[0]!;
+  try {
+    const market = parsed.data.market;
+    const tradingDate = parsed.data.tradingDate ?? new Date().toISOString().split('T')[0]!;
 
-  // Upsert briefing in GENERATING status
-  const briefing = await prisma.briefing.upsert({
-    where: {
-      market_tradingDate: {
+    // Upsert briefing in GENERATING status
+    const briefing = await prisma.briefing.upsert({
+      where: {
+        market_tradingDate: {
+          market,
+          tradingDate: new Date(tradingDate),
+        },
+      },
+      create: {
         market,
         tradingDate: new Date(tradingDate),
+        status: 'generating',
+        generatedAt: new Date(),
+        promptVersion: '1.0.0',
+        modelRouteVersion: '1.0.0',
       },
-    },
-    create: {
-      market,
-      tradingDate: new Date(tradingDate),
-      status: 'generating',
-      generatedAt: new Date(),
-      promptVersion: '1.0.0',
-      modelRouteVersion: '1.0.0',
-    },
-    update: {
-      status: 'generating',
-      generatedAt: new Date(),
-    },
-  });
+      update: {
+        status: 'generating',
+        generatedAt: new Date(),
+      },
+    });
 
-  // In production, this triggers the Trigger.dev generate-briefing task.
-  // For now, return the record so the UI can poll for status.
-  return NextResponse.json({
-    briefingId: briefing.id,
-    status: briefing.status,
-    tradingDate,
-    market,
-  });
+    // In production, this triggers the Trigger.dev generate-briefing task.
+    // For now, return the record so the UI can poll for status.
+    return NextResponse.json({
+      briefingId: briefing.id,
+      status: briefing.status,
+      tradingDate,
+      market,
+    });
+  } catch (err) {
+    console.error('[POST /api/briefings/generate]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

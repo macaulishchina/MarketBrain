@@ -22,19 +22,24 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const watchlists = await prisma.watchlist.findMany({
-    where: { userId: session.user.id },
-    include: {
-      items: {
-        include: { instrument: true },
-        orderBy: { rank: 'asc' },
+  try {
+    const watchlists = await prisma.watchlist.findMany({
+      where: { userId: session.user.id },
+      include: {
+        items: {
+          include: { instrument: true },
+          orderBy: { rank: 'asc' },
+        },
+        _count: { select: { items: true } },
       },
-      _count: { select: { items: true } },
-    },
-    orderBy: { updatedAt: 'desc' },
-  });
+      orderBy: { updatedAt: 'desc' },
+    });
 
-  return NextResponse.json(watchlists);
+    return NextResponse.json(watchlists);
+  } catch (err) {
+    console.error('[GET /api/watchlists]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -52,12 +57,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const watchlist = await prisma.watchlist.create({
-    data: {
-      ...parsed.data,
-      userId: session.user.id,
-    },
-  });
+  try {
+    const watchlist = await prisma.watchlist.create({
+      data: {
+        ...parsed.data,
+        userId: session.user.id,
+      },
+    });
 
-  return NextResponse.json(watchlist, { status: 201 });
+    return NextResponse.json(watchlist, { status: 201 });
+  } catch (err) {
+    console.error('[POST /api/watchlists]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

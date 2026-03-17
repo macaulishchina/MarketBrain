@@ -25,20 +25,25 @@ export async function GET(req: NextRequest) {
   const query = searchParams.get('q');
   const take = Math.min(Number(searchParams.get('limit')) || 50, 200);
 
-  const instruments = await prisma.instrument.findMany({
-    where: query
-      ? {
-          OR: [
-            { ticker: { contains: query, mode: 'insensitive' } },
-            { name: { contains: query, mode: 'insensitive' } },
-          ],
-        }
-      : undefined,
-    orderBy: { ticker: 'asc' },
-    take,
-  });
+  try {
+    const instruments = await prisma.instrument.findMany({
+      where: query
+        ? {
+            OR: [
+              { ticker: { contains: query, mode: 'insensitive' } },
+              { name: { contains: query, mode: 'insensitive' } },
+            ],
+          }
+        : undefined,
+      orderBy: { ticker: 'asc' },
+      take,
+    });
 
-  return NextResponse.json(instruments);
+    return NextResponse.json(instruments);
+  } catch (err) {
+    console.error('[GET /api/instruments]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -56,9 +61,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const instrument = await prisma.instrument.create({
-    data: parsed.data,
-  });
+  try {
+    const instrument = await prisma.instrument.create({
+      data: parsed.data,
+    });
 
-  return NextResponse.json(instrument, { status: 201 });
+    return NextResponse.json(instrument, { status: 201 });
+  } catch (err) {
+    console.error('[POST /api/instruments]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

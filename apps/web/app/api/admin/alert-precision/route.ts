@@ -27,7 +27,8 @@ export async function GET(request: NextRequest) {
 
   const since = new Date(Date.now() - parsed.data.days * 86_400_000);
 
-  const [bySeverity, byStatus, byChannel, total] = await Promise.all([
+  try {
+    const [bySeverity, byStatus, byChannel, total] = await Promise.all([
     prisma.alert.groupBy({
       by: ['severity'],
       where: { createdAt: { gte: since } },
@@ -67,4 +68,8 @@ export async function GET(request: NextRequest) {
     byStatus: Object.fromEntries(byStatus.map((s) => [s.status, s._count])),
     byChannel: Object.fromEntries(byChannel.map((s) => [s.channel, s._count])),
   });
+  } catch (err) {
+    console.error('[GET /api/admin/alert-precision]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

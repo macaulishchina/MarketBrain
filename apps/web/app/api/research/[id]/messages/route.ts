@@ -15,6 +15,7 @@ import {
 } from '@marketbrain/ai';
 import { gateResearchAnswer, computeResearchQuality } from '@marketbrain/domain';
 import { z } from 'zod';
+import { featureFlags } from '@marketbrain/config';
 
 const sendMessageSchema = z.object({
   content: z.string().min(1).max(5000),
@@ -25,6 +26,10 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (!featureFlags.interactiveResearch) {
+    return NextResponse.json({ error: 'Interactive research is currently disabled' }, { status: 503 });
+  }
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -59,7 +64,8 @@ export async function POST(
 
   const { content } = parsed.data;
 
-  // 1. Persist user message
+  try {
+    // 1. Persist user message
   const userMessage = await prisma.researchMessage.create({
     data: {
       sessionId: id,
@@ -231,6 +237,10 @@ export async function POST(
     qualityScore,
     failures: gate.failures,
   });
+  } catch (err) {
+    console.error('[POST /api/research/[id]/messages]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 /** GET /api/research/[id]/messages — get messages for a session */
@@ -256,14 +266,19 @@ export async function GET(
   const limit = Number(req.nextUrl.searchParams.get('limit') ?? '50');
   const offset = Number(req.nextUrl.searchParams.get('offset') ?? '0');
 
-  const messages = await prisma.researchMessage.findMany({
-    where: { sessionId: id },
-    orderBy: { createdAt: 'asc' },
-    take: Math.min(limit, 100),
-    skip: offset,
-  });
+  try {
+    const messages = await prisma.researchMessage.findMany({
+      where: { sessionId: id },
+      orderBy: { createdAt: 'asc' },
+      take: Math.min(limit, 100),
+      skip: offset,
+    });
 
-  return NextResponse.json({ messages });
+    return NextResponse.json({ messages });
+  } catch (err) {
+    console.error('[GET /api/research/[id]/messages]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 function buildGateway(): ModelGateway {

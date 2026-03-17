@@ -209,6 +209,8 @@ model Document {
   evidence Evidence[]
 
   @@unique([sourceId, externalId])
+  @@index([sourceId])
+  @@index([publishedAt])
   @@map("documents")
 }
 
@@ -225,6 +227,7 @@ model DocumentChunk {
   evidence Evidence[]
 
   @@unique([documentId, chunkIndex])
+  @@index([documentId])
   @@map("document_chunks")
 }
 
@@ -268,6 +271,8 @@ model Event {
   briefingItems BriefingItem[]
   alerts       Alert[]
 
+  @@index([status, createdAt])
+  @@index([firstSeenAt])
   @@map("events")
 }
 
@@ -333,6 +338,9 @@ model Alert {
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId, createdAt])
+  @@index([eventId])
+  @@index([userId, status])
   @@map("alerts")
 }
 
@@ -353,6 +361,7 @@ model ResearchSession {
   user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages ResearchMessage[]
 
+  @@index([userId, updatedAt])
   @@map("research_sessions")
 }
 
@@ -367,6 +376,7 @@ model ResearchMessage {
 
   session ResearchSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
+  @@index([sessionId, createdAt])
   @@map("research_messages")
 }
 
@@ -400,6 +410,8 @@ model ModelCall {
   createdAt       DateTime @default(now()) @map("created_at")
 
   @@map("model_calls")
+  @@index([createdAt])
+  @@index([taskType, createdAt])
 }
 
 model EvalCase {
@@ -448,5 +460,6 @@ model ReviewItem {
 
   reviewer User? @relation(fields: [reviewedBy], references: [id], onDelete: SetNull)
 
+  @@index([status, createdAt])
   @@map("review_items")
 }

@@ -16,63 +16,68 @@ export async function GET(
 
   const { id } = await params;
 
-  const researchSession = await prisma.researchSession.findUnique({
-    where: { id },
-    include: {
-      messages: {
-        orderBy: { createdAt: 'asc' },
+  try {
+    const researchSession = await prisma.researchSession.findUnique({
+      where: { id },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
       },
-    },
-  });
+    });
 
-  if (!researchSession || researchSession.userId !== session.user.id) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!researchSession || researchSession.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    // Fetch evidence for all messages
+    const allEvidenceIds = researchSession.messages.flatMap(
+      (m) => (m.evidenceIds as string[]) ?? [],
+    );
+
+    const evidenceRecords =
+      allEvidenceIds.length > 0
+        ? await prisma.evidence.findMany({
+            where: { id: { in: allEvidenceIds } },
+          })
+        : [];
+
+    const exportData = {
+      exportedAt: new Date().toISOString(),
+      session: {
+        id: researchSession.id,
+        title: researchSession.title,
+        mode: researchSession.mode,
+        query: researchSession.query,
+        status: researchSession.status,
+        createdAt: researchSession.createdAt,
+        updatedAt: researchSession.updatedAt,
+      },
+      messages: researchSession.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        renderedBlocks: m.renderedBlocks,
+        evidenceIds: m.evidenceIds,
+        createdAt: m.createdAt,
+      })),
+      evidence: evidenceRecords.map((e) => ({
+        id: e.id,
+        quote: e.quote,
+        locator: e.locator,
+        evidenceType: e.evidenceType,
+        confidence: e.confidence,
+      })),
+    };
+
+    return new NextResponse(JSON.stringify(exportData, null, 2), {
+      status: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Disposition': `attachment; filename="research-${id}.json"`,
+      },
+    });
+  } catch (err) {
+    console.error('[GET /api/research/[id]/export]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  // Fetch evidence for all messages
-  const allEvidenceIds = researchSession.messages.flatMap(
-    (m) => (m.evidenceIds as string[]) ?? [],
-  );
-
-  const evidenceRecords =
-    allEvidenceIds.length > 0
-      ? await prisma.evidence.findMany({
-          where: { id: { in: allEvidenceIds } },
-        })
-      : [];
-
-  const exportData = {
-    exportedAt: new Date().toISOString(),
-    session: {
-      id: researchSession.id,
-      title: researchSession.title,
-      mode: researchSession.mode,
-      query: researchSession.query,
-      status: researchSession.status,
-      createdAt: researchSession.createdAt,
-      updatedAt: researchSession.updatedAt,
-    },
-    messages: researchSession.messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-      renderedBlocks: m.renderedBlocks,
-      evidenceIds: m.evidenceIds,
-      createdAt: m.createdAt,
-    })),
-    evidence: evidenceRecords.map((e) => ({
-      id: e.id,
-      quote: e.quote,
-      locator: e.locator,
-      evidenceType: e.evidenceType,
-      confidence: e.confidence,
-    })),
-  };
-
-  return new NextResponse(JSON.stringify(exportData, null, 2), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Disposition': `attachment; filename="research-${id}.json"`,
-    },
-  });
 }

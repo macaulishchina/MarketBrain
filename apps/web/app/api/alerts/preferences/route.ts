@@ -41,16 +41,21 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { notificationPreferences: true },
-  });
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { notificationPreferences: true },
+    });
 
-  const prefs = user?.notificationPreferences
-    ? preferencesSchema.parse(user.notificationPreferences)
-    : DEFAULT_PREFERENCES;
+    const prefs = user?.notificationPreferences
+      ? preferencesSchema.parse(user.notificationPreferences)
+      : DEFAULT_PREFERENCES;
 
-  return NextResponse.json(prefs);
+    return NextResponse.json(prefs);
+  } catch (err) {
+    console.error('[GET /api/alerts/preferences]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function PUT(req: NextRequest) {
@@ -68,10 +73,15 @@ export async function PUT(req: NextRequest) {
     );
   }
 
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: { notificationPreferences: parsed.data },
-  });
+  try {
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { notificationPreferences: parsed.data },
+    });
 
-  return NextResponse.json(parsed.data);
+    return NextResponse.json(parsed.data);
+  } catch (err) {
+    console.error('[PUT /api/alerts/preferences]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

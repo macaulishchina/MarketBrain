@@ -29,31 +29,37 @@ export async function GET(request: NextRequest) {
   }
 
   const { status, itemType, limit, offset } = parsed.data;
-  const where = {
-    status,
-    ...(itemType && { itemType }),
-  };
 
-  const [items, total, counts] = await Promise.all([
-    prisma.reviewItem.findMany({
-      where,
-      include: { reviewer: { select: { id: true, name: true, email: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset,
-    }),
-    prisma.reviewItem.count({ where }),
-    prisma.reviewItem.groupBy({
-      by: ['status'],
-      _count: true,
-    }),
-  ]);
+  try {
+    const where = {
+      status,
+      ...(itemType && { itemType }),
+    };
 
-  const statusCounts = Object.fromEntries(
-    counts.map((c) => [c.status, c._count]),
-  );
+    const [items, total, counts] = await Promise.all([
+      prisma.reviewItem.findMany({
+        where,
+        include: { reviewer: { select: { id: true, name: true, email: true } } },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.reviewItem.count({ where }),
+      prisma.reviewItem.groupBy({
+        by: ['status'],
+        _count: true,
+      }),
+    ]);
 
-  return NextResponse.json({ items, total, limit, offset, statusCounts });
+    const statusCounts = Object.fromEntries(
+      counts.map((c) => [c.status, c._count]),
+    );
+
+    return NextResponse.json({ items, total, limit, offset, statusCounts });
+  } catch (err) {
+    console.error('[GET /api/admin/review-queue]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 const resolveSchema = z.object({
@@ -78,15 +84,20 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid body', details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const item = await prisma.reviewItem.update({
-    where: { id: parsed.data.id },
-    data: {
-      status: parsed.data.action,
-      reviewedBy: session.user.id,
-      reviewedAt: new Date(),
-      reviewNotes: parsed.data.notes ?? null,
-    },
-  });
+  try {
+    const item = await prisma.reviewItem.update({
+      where: { id: parsed.data.id },
+      data: {
+        status: parsed.data.action,
+        reviewedBy: session.user.id,
+        reviewedAt: new Date(),
+        reviewNotes: parsed.data.notes ?? null,
+      },
+    });
 
-  return NextResponse.json(item);
+    return NextResponse.json(item);
+  } catch (err) {
+    console.error('[PATCH /api/admin/review-queue]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

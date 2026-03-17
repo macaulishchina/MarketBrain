@@ -33,31 +33,36 @@ export async function GET(request: NextRequest) {
   const { provider, taskType, status, days, limit, offset } = parsed.data;
   const since = new Date(Date.now() - days * 86_400_000);
 
-  const where = {
-    createdAt: { gte: since },
-    ...(provider && { provider }),
-    ...(taskType && { taskType }),
-    ...(status && { resultStatus: status }),
-  };
+  try {
+    const where = {
+      createdAt: { gte: since },
+      ...(provider && { provider }),
+      ...(taskType && { taskType }),
+      ...(status && { resultStatus: status }),
+    };
 
-  const [calls, total] = await Promise.all([
-    prisma.modelCall.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset,
-    }),
-    prisma.modelCall.count({ where }),
-  ]);
+    const [calls, total] = await Promise.all([
+      prisma.modelCall.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.modelCall.count({ where }),
+    ]);
 
-  // Aggregate stats
-  const stats = await prisma.modelCall.groupBy({
-    by: ['provider', 'taskType', 'resultStatus'],
-    where: { createdAt: { gte: since } },
-    _count: true,
-    _sum: { inputTokens: true, outputTokens: true, latencyMs: true, cost: true },
-    _avg: { latencyMs: true, cost: true },
-  });
+    // Aggregate stats
+    const stats = await prisma.modelCall.groupBy({
+      by: ['provider', 'taskType', 'resultStatus'],
+      where: { createdAt: { gte: since } },
+      _count: true,
+      _sum: { inputTokens: true, outputTokens: true, latencyMs: true, cost: true },
+      _avg: { latencyMs: true, cost: true },
+    });
 
-  return NextResponse.json({ calls, total, limit, offset, stats });
+    return NextResponse.json({ calls, total, limit, offset, stats });
+  } catch (err) {
+    console.error('[GET /api/admin/model-calls]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

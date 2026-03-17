@@ -36,19 +36,24 @@ export async function PATCH(
     );
   }
 
-  const data: Record<string, unknown> = {};
-  if (parsed.data.status) {
-    data.status = parsed.data.status;
-    if (parsed.data.status === 'read') {
-      data.clickedAt = new Date();
+  try {
+    const data: Record<string, unknown> = {};
+    if (parsed.data.status) {
+      data.status = parsed.data.status;
+      if (parsed.data.status === 'read') {
+        data.clickedAt = new Date();
+      }
     }
-  }
-  if (parsed.data.muted !== undefined) {
-    data.muted = parsed.data.muted;
-  }
+    if (parsed.data.muted !== undefined) {
+      data.muted = parsed.data.muted;
+    }
 
-  const updated = await prisma.alert.update({ where: { id }, data });
-  return NextResponse.json(updated);
+    const updated = await prisma.alert.update({ where: { id }, data });
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error('[PATCH /api/alerts/[id]]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 export async function GET(
@@ -62,18 +67,23 @@ export async function GET(
 
   const { id } = await params;
 
-  const alert = await prisma.alert.findUnique({
-    where: { id },
-    include: {
-      event: {
-        include: { instruments: { include: { instrument: true } } },
+  try {
+    const alert = await prisma.alert.findUnique({
+      where: { id },
+      include: {
+        event: {
+          include: { instruments: { include: { instrument: true } } },
+        },
       },
-    },
-  });
+    });
 
-  if (!alert || alert.userId !== session.user.id) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!alert || alert.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(alert);
+  } catch (err) {
+    console.error('[GET /api/alerts/[id]]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  return NextResponse.json(alert);
 }

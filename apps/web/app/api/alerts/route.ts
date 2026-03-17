@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@marketbrain/db';
 import { auth } from '../../../lib/auth';
 import { z } from 'zod';
+import { featureFlags } from '@marketbrain/config';
 
 const listQuerySchema = z.object({
   severity: z.enum(['s1', 's2', 's3']).optional(),
@@ -13,6 +14,10 @@ const listQuerySchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
+  if (!featureFlags.realtimeAlerts) {
+    return NextResponse.json({ error: 'Alerts feature is currently disabled' }, { status: 503 });
+  }
+
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,24 +34,29 @@ export async function GET(req: NextRequest) {
 
   const { severity, status, limit, offset } = parsed.data;
 
-  const where: Record<string, unknown> = { userId: session.user.id };
-  if (severity) where.severity = severity;
-  if (status) where.status = status;
+  try {
+    const where: Record<string, unknown> = { userId: session.user.id };
+    if (severity) where.severity = severity;
+    if (status) where.status = status;
 
-  const [alerts, total] = await Promise.all([
-    prisma.alert.findMany({
-      where,
-      include: {
-        event: {
-          include: { instruments: { include: { instrument: true } } },
+    const [alerts, total] = await Promise.all([
+      prisma.alert.findMany({
+        where,
+        include: {
+          event: {
+            include: { instruments: { include: { instrument: true } } },
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset,
-    }),
-    prisma.alert.count({ where }),
-  ]);
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.alert.count({ where }),
+    ]);
 
-  return NextResponse.json({ alerts, total, limit, offset });
+    return NextResponse.json({ alerts, total, limit, offset });
+  } catch (err) {
+    console.error('[GET /api/alerts]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

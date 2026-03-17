@@ -37,20 +37,25 @@ export async function POST(
     );
   }
 
-  const maxRank = await prisma.watchlistItem.aggregate({
-    where: { watchlistId: id },
-    _max: { rank: true },
-  });
+  try {
+    const maxRank = await prisma.watchlistItem.aggregate({
+      where: { watchlistId: id },
+      _max: { rank: true },
+    });
 
-  const item = await prisma.watchlistItem.create({
-    data: {
-      watchlistId: id,
-      instrumentId: parsed.data.instrumentId,
-      note: parsed.data.note,
-      rank: (maxRank._max.rank ?? 0) + 1,
-    },
-    include: { instrument: true },
-  });
+    const item = await prisma.watchlistItem.create({
+      data: {
+        watchlistId: id,
+        instrumentId: parsed.data.instrumentId,
+        note: parsed.data.note,
+        rank: (maxRank._max.rank ?? 0) + 1,
+      },
+      include: { instrument: true },
+    });
 
-  return NextResponse.json(item, { status: 201 });
+    return NextResponse.json(item, { status: 201 });
+  } catch (err) {
+    console.error('[POST /api/watchlists/[id]/items]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

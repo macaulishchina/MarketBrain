@@ -31,26 +31,27 @@ export async function POST(request: NextRequest) {
 
   const { displayName, tickers, alertChannels, briefingTime } = parsed.data;
 
-  // Update user profile + notification preferences
-  const existingUser = await prisma.user.findUniqueOrThrow({
-    where: { id: session.user.id },
-    select: { notificationPreferences: true },
-  });
+  try {
+    // Update user profile + notification preferences
+    const existingUser = await prisma.user.findUniqueOrThrow({
+      where: { id: session.user.id },
+      select: { notificationPreferences: true },
+    });
 
-  const currentPrefs = (existingUser.notificationPreferences as Record<string, unknown>) ?? {};
+    const currentPrefs = (existingUser.notificationPreferences as Record<string, unknown>) ?? {};
 
-  await prisma.user.update({
-    where: { id: session.user.id },
-    data: {
-      ...(displayName && { name: displayName }),
-      notificationPreferences: {
-        ...currentPrefs,
-        alertChannels,
-        briefingTime,
-        onboardingCompleted: true,
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        ...(displayName && { name: displayName }),
+        notificationPreferences: {
+          ...currentPrefs,
+          alertChannels,
+          briefingTime,
+          onboardingCompleted: true,
+        },
       },
-    },
-  });
+    });
 
   // Create default watchlist with selected tickers
   if (tickers.length > 0) {
@@ -79,5 +80,9 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('[POST /api/onboarding]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

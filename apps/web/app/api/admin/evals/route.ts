@@ -30,32 +30,37 @@ export async function GET(request: NextRequest) {
   const { taskType, limit, offset } = parsed.data;
   const where = taskType ? { taskType } : {};
 
-  const [cases, total] = await Promise.all([
-    prisma.evalCase.findMany({
-      where,
-      include: {
-        runs: {
-          orderBy: { createdAt: 'desc' },
-          take: 5,
+  try {
+    const [cases, total] = await Promise.all([
+      prisma.evalCase.findMany({
+        where,
+        include: {
+          runs: {
+            orderBy: { createdAt: 'desc' },
+            take: 5,
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      skip: offset,
-    }),
-    prisma.evalCase.count({ where }),
-  ]);
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip: offset,
+      }),
+      prisma.evalCase.count({ where }),
+    ]);
 
-  // Compute summary stats per task type
-  const summary = await prisma.evalRun.groupBy({
-    by: ['promptVersion'],
-    _avg: { score: true },
-    _count: true,
-    _min: { score: true },
-    _max: { score: true },
-  });
+    // Compute summary stats per task type
+    const summary = await prisma.evalRun.groupBy({
+      by: ['promptVersion'],
+      _avg: { score: true },
+      _count: true,
+      _min: { score: true },
+      _max: { score: true },
+    });
 
-  return NextResponse.json({ cases, total, limit, offset, summary });
+    return NextResponse.json({ cases, total, limit, offset, summary });
+  } catch (err) {
+    console.error('[GET /api/admin/evals]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 const createCaseSchema = z.object({
@@ -82,14 +87,19 @@ export async function POST(request: NextRequest) {
   }
 
   const { taskType, gradingRule } = parsed.data;
-  const evalCase = await prisma.evalCase.create({
-    data: {
-      taskType,
-      input: JSON.parse(JSON.stringify(parsed.data.input)),
-      expected: JSON.parse(JSON.stringify(parsed.data.expected)),
-      gradingRule,
-    },
-  });
+  try {
+    const evalCase = await prisma.evalCase.create({
+      data: {
+        taskType,
+        input: JSON.parse(JSON.stringify(parsed.data.input)),
+        expected: JSON.parse(JSON.stringify(parsed.data.expected)),
+        gradingRule,
+      },
+    });
 
-  return NextResponse.json(evalCase, { status: 201 });
+    return NextResponse.json(evalCase, { status: 201 });
+  } catch (err) {
+    console.error('[POST /api/admin/evals]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

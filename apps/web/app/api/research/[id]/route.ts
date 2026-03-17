@@ -22,20 +22,25 @@ export async function GET(
 
   const { id } = await params;
 
-  const researchSession = await prisma.researchSession.findUnique({
-    where: { id },
-    include: {
-      messages: {
-        orderBy: { createdAt: 'asc' },
+  try {
+    const researchSession = await prisma.researchSession.findUnique({
+      where: { id },
+      include: {
+        messages: {
+          orderBy: { createdAt: 'asc' },
+        },
       },
-    },
-  });
+    });
 
-  if (!researchSession || researchSession.userId !== session.user.id) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    if (!researchSession || researchSession.userId !== session.user.id) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(researchSession);
+  } catch (err) {
+    console.error('[GET /api/research/[id]]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-
-  return NextResponse.json(researchSession);
 }
 
 /** PATCH /api/research/[id] — update session title or status */
@@ -64,12 +69,17 @@ export async function PATCH(
     );
   }
 
-  const updated = await prisma.researchSession.update({
-    where: { id },
-    data: parsed.data,
-  });
+  try {
+    const updated = await prisma.researchSession.update({
+      where: { id },
+      data: parsed.data,
+    });
 
-  return NextResponse.json(updated);
+    return NextResponse.json(updated);
+  } catch (err) {
+    console.error('[PATCH /api/research/[id]]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
 
 /** DELETE /api/research/[id] — archive (soft delete) a session */
@@ -89,10 +99,15 @@ export async function DELETE(
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }
 
-  await prisma.researchSession.update({
-    where: { id },
-    data: { status: 'archived' },
-  });
+  try {
+    await prisma.researchSession.update({
+      where: { id },
+      data: { status: 'archived' },
+    });
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error('[DELETE /api/research/[id]]', err);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }
