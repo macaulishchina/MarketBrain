@@ -9,7 +9,6 @@ import {
   Newspaper,
   Settings,
   Shield,
-  LogOut,
 } from 'lucide-react';
 
 type NavItem = {
@@ -42,17 +41,26 @@ export function AppShell({
 
   return (
     <div className="flex h-screen bg-background">
+      {/* Skip to main content link (a11y) */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:text-primary-foreground"
+      >
+        Skip to main content
+      </a>
+
       {/* Desktop Sidebar */}
-      <aside className="hidden w-64 flex-col border-r bg-card md:flex">
+      <aside className="hidden w-64 flex-col border-r bg-card md:flex" role="navigation" aria-label="Main navigation">
         <div className="flex h-14 items-center border-b px-4">
           <span className="text-lg font-bold tracking-tight">MarketBrain</span>
         </div>
 
-        <nav className="flex-1 space-y-1 px-3 py-4">
+        <nav className="flex-1 space-y-1 px-3 py-4" aria-label="Primary">
           {navItems.map((item) => (
             <a
               key={item.href}
               href={item.href}
+              aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 pathname.startsWith(item.href)
                   ? 'bg-accent text-accent-foreground'
@@ -69,6 +77,7 @@ export function AppShell({
           {user.role === 'admin' && (
             <a
               href="/admin/sources"
+              aria-current={pathname.startsWith('/admin') ? 'page' : undefined}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 pathname.startsWith('/admin')
                   ? 'bg-accent text-accent-foreground'
@@ -83,6 +92,7 @@ export function AppShell({
             <a
               key={item.href}
               href={item.href}
+              aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
                 pathname.startsWith(item.href)
                   ? 'bg-accent text-accent-foreground'
@@ -97,7 +107,7 @@ export function AppShell({
 
         <div className="border-t p-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground" aria-hidden="true">
               {(user.name ?? user.email ?? '?')[0]?.toUpperCase()}
             </div>
             <div className="flex-1 truncate">
@@ -115,17 +125,20 @@ export function AppShell({
           <span className="text-lg font-bold tracking-tight">MarketBrain</span>
         </header>
 
-        <main className="flex-1 overflow-y-auto">{children}</main>
+        <main id="main-content" className="flex-1 overflow-y-auto" role="main">
+          {children}
+        </main>
 
         {/* Mobile Bottom Nav */}
-        <nav className="flex border-t bg-card md:hidden">
+        <nav className="flex border-t bg-card md:hidden safe-area-bottom" aria-label="Mobile navigation">
           {navItems
             .filter((item) => item.mobile)
             .map((item) => (
               <a
                 key={item.href}
                 href={item.href}
-                className={`flex flex-1 flex-col items-center gap-1 py-2 text-xs ${
+                aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
+                className={`flex flex-1 flex-col items-center gap-1 py-2 text-xs min-h-[48px] justify-center ${
                   pathname.startsWith(item.href)
                     ? 'text-primary'
                     : 'text-muted-foreground'
