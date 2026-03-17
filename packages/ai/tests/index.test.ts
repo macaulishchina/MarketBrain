@@ -5,12 +5,16 @@ import {
   eventExtractionSchema,
   briefingCompositionSchema,
   judgeResultSchema,
+  alertCardSchema,
   getPrompt,
   evalFactuality,
   evalCitationCoverage,
   evalHeadlineQuality,
+  evalAlertPrecision,
   type ComposedBriefingItem,
   type EventExtraction,
+  type AlertCard,
+  type AlertFeedback,
 } from '../src/index';
 
 // ---------------------------------------------------------------------------
@@ -314,6 +318,146 @@ describe('@marketbrain/ai evaluators', () => {
 
     it('returns 0 for empty items', () => {
       const result = evalHeadlineQuality([]);
+      expect(result.score).toBe(0);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Alert Schemas + Prompt
+// ---------------------------------------------------------------------------
+
+describe('@marketbrain/ai alert support', () => {
+  describe('alertCardSchema', () => {
+    it('accepts valid alert card', () => {
+      const result = alertCardSchema.safeParse({
+        title: 'AAPL beats Q4 earning estimates by 5%',
+        summary: 'Strong demand signals sustained iOS revenue.',
+        severityReasoning: 'High confidence with strong evidence.',
+        tickers: ['AAPL'],
+        eventType: 'earnings',
+        evidenceQuotes: ['Revenue of $124B exceeded consensus by 3%.'],
+        actionItems: ['Monitor Q2 guidance call', 'Review services growth'],
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('rejects missing evidence', () => {
+      const result = alertCardSchema.safeParse({
+        title: 'Test',
+        summary: 'Test',
+        severityReasoning: 'Test',
+        tickers: [],
+        eventType: 'earnings',
+        evidenceQuotes: [], // min 1 required
+        actionItems: [],
+      });
+      expect(result.success).toBe(false);
+    });
+
+    it('rejects title over 200 chars', () => {
+      const result = alertCardSchema.safeParse({
+        title: 'A'.repeat(201),
+        summary: 'Summary',
+        severityReasoning: 'Reason',
+        tickers: [],
+        eventType: 'earnings',
+        evidenceQuotes: ['quote'],
+        actionItems: [],
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('alert generation prompt', () => {
+    it('registers and retrieves generate_alert prompt', () => {
+      const prompt = getPrompt('generate_alert');
+      expect(prompt.taskType).toBe('generate_alert');
+      expect(prompt.version).toBe('1.0.0');
+      expect(prompt.system).toContain('alert card generator');
+    });
+
+    it('builds user message with event details', () => {
+      const prompt = getPrompt<{
+        eventTitle: string;
+        eventSummary: string;
+        eventType: string;
+        tickers: string[];
+        evidenceQuotes: string[];
+        importanceScore: number;
+        confidenceScore: number;
+        noveltyScore: number;
+        severity: string;
+      }>('generate_alert');
+
+      const msg = prompt.buildUserMessage({
+        eventTitle: 'AAPL Q4 Beat',
+        eventSummary: 'Apple exceeded estimates.',
+        eventType: 'earnings',
+        tickers: ['AAPL'],
+        evidenceQuotes: ['Revenue of $124B.'],
+        importanceScore: 0.85,
+        confidenceScore: 0.9,
+        noveltyScore: 0.6,
+        severity: 's1',
+      });
+
+      expect(msg).toContain('AAPL Q4 Beat');
+      expect(msg).toContain('s1');
+      expect(msg).toContain('Revenue of $124B.');
+    });
+  });
+
+  describe('evalAlertPrecision', () => {
+    const sampleCard: AlertCard = {
+      title: 'AAPL beats estimates',
+      summary: 'Strong demand.',
+      severityReasoning: 'High confidence.',
+      tickers: ['AAPL'],
+      eventType: 'earnings',
+      evidenceQuotes: ['Revenue of $124B.'],
+      actionItems: ['Watch Q2'],
+    };
+
+    it('returns 1.0 when all delivered alerts are read', () => {
+      const feedback: AlertFeedback[] = [
+        { alertCard: sampleCard, status: 'read', clicked: true },
+        { alertCard: sampleCard, status: 'read', clicked: false },
+      ];
+      const result = evalAlertPrecision(feedback);
+      expect(result.name).toBe('alert-precision');
+      expect(result.score).toBe(1);
+    });
+
+    it('returns 0 when all delivered alerts are dismissed', () => {
+      const feedback: AlertFeedback[] = [
+        { alertCard: sampleCard, status: 'dismissed', clicked: false },
+      ];
+      const result = evalAlertPrecision(feedback);
+      expect(result.score).toBe(0);
+    });
+
+    it('returns 0.5 for half read, half dismissed', () => {
+      const feedback: AlertFeedback[] = [
+        { alertCard: sampleCard, status: 'read', clicked: true },
+        { alertCard: sampleCard, status: 'dismissed', clicked: false },
+      ];
+      const result = evalAlertPrecision(feedback);
+      expect(result.score).toBe(0.5);
+    });
+
+    it('ignores pending/sent alerts', () => {
+      const feedback: AlertFeedback[] = [
+        { alertCard: sampleCard, status: 'pending', clicked: false },
+        { alertCard: sampleCard, status: 'sent', clicked: false },
+        { alertCard: sampleCard, status: 'read', clicked: true },
+      ];
+      const result = evalAlertPrecision(feedback);
+      expect(result.score).toBe(1); // Only 1 delivered (read), and it's useful
+    });
+
+    it('returns 0 for no feedback', () => {
+      const result = evalAlertPrecision([]);
       expect(result.score).toBe(0);
     });
   });

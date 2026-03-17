@@ -96,3 +96,44 @@ export function gateBriefing(candidate: BriefingCandidate): BriefingGateResult {
     rejectedItems,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Alert Gate
+// ---------------------------------------------------------------------------
+
+export interface AlertCandidate {
+  title: string;
+  summary: string;
+  evidenceQuotes: string[];
+  confidenceScore: number;
+  tickers: string[];
+}
+
+/** Minimum confidence to send an alert. */
+const MIN_ALERT_CONFIDENCE = 0.3;
+
+/**
+ * Check whether an alert candidate meets publication standards.
+ * Similar to briefing item gate but with alert-specific rules.
+ */
+export function gateAlert(item: AlertCandidate): GateResult {
+  const failures: string[] = [];
+
+  if (!item.title || item.title.trim().length === 0) {
+    failures.push('Missing alert title');
+  }
+  if (item.title && item.title.length > 200) {
+    failures.push('Alert title exceeds 200 characters');
+  }
+  if (!item.summary || item.summary.trim().length === 0) {
+    failures.push('Missing alert summary');
+  }
+  if (item.evidenceQuotes.length < 1) {
+    failures.push('Alert requires at least 1 evidence quote');
+  }
+  if (item.confidenceScore < MIN_ALERT_CONFIDENCE) {
+    failures.push(`Confidence ${item.confidenceScore} below alert threshold ${MIN_ALERT_CONFIDENCE}`);
+  }
+
+  return { passed: failures.length === 0, failures };
+}

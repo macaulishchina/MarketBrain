@@ -1,80 +1,79 @@
-# Execution Plan — Phase 2: 盘前早报 v0
+# Execution Plan — Phase 3: 实时预警 v0
 
-> Build the AI execution layer and deliver the first end-to-end briefing workflow.
+> Build the real-time alert pipeline: event classification → severity scoring → dedup → delivery → feedback.
 
 ## Goal
 
-- Model Gateway with AI SDK, supporting OpenAI / Anthropic / Google providers
-- Prompt Registry with versioned templates for extraction and briefing composition
-- AI-specific schemas for event extraction and briefing composition
-- Tool contracts for document search, price snapshot, etc.
-- Worker tasks: event extraction, briefing composition, briefing publish
-- Briefing generation API + enhanced briefing pages
-- First evaluator set (factuality, citation coverage)
-- Guardrails for publish gate (evidence check, confidence threshold)
+- Alert severity scoring (S1/S2/S3) based on materiality + relevance
+- Alert deduplication, mute, and cooldown logic
+- AI-powered alert card generation (headline + summary + tickers)
+- Worker tasks: classify-event, generate-alert, deliver-alerts
+- Alert API routes (list, read, dismiss, mute, preferences)
+- Enhanced alert center page with filters, actions, and feedback
+- Notification preferences (in-app, email opt-in, push opt-in)
+- Alert precision evaluator + tests
 
 ## Why Now
 
-- Phase 1 established all data models, auth, app shell, and page skeletons.
-- Phase 2 closes the first AI-driven loop: documents → events → briefing → user.
+- Phase 2 established the AI execution layer (gateway, prompts, schemas, scoring, guardrails).
+- Phase 3 reuses event extraction and extends it to near-real-time alert delivery.
+- Per §7.2 of StartFromHere.md: "把系统从 batch 拉到 near-real-time."
 
 ## Constraints
 
-- Schema-first: AI output schemas defined before prompts.
-- Evidence-first: no briefing item without evidence IDs.
-- Eval-first: prompt changes paired with fixtures/evaluators.
-- All model calls server-side only (worker or Route Handlers).
-- Prompts are versioned repo assets in `packages/ai/src/prompts/`.
-- Business guardrails live in `packages/domain`, not in `packages/ai`.
+- Evidence-first: every alert must link to at least one event with evidence.
+- Severity gates: S1 alerts require confidenceScore ≥ 0.7; S2 ≥ 0.5; S3 ≥ 0.3.
+- Dedup: same event+user pair does not generate duplicate alerts.
+- Mute: user can mute per-ticker or per-event-type; muted alerts are created but not delivered.
+- Cooldown: max 1 S1 alert per instrument per 4-hour window.
+- All delivery server-side, no browser model calls.
+- Alert feedback (read/dismiss) tracked for precision evaluation.
 
 ## Non-Goals
 
-- Real-time alert workflow (Phase 3).
-- Interactive research chat (Phase 4).
-- Full multi-model routing with cost optimization (Phase 5).
-- Data source connectors / real external data ingestion.
+- Real external webhook/polling connectors (Phase 3 uses existing documents).
+- Web Push (requires service worker; deferred to Phase 3.5).
+- Email delivery integration (deferred; schema + preference ready).
+- Interactive research (Phase 4).
 
 ## Affected Areas
 
-- `packages/ai/src/` — gateway, prompts, schemas, tools, evaluators, router
-- `packages/domain/src/` — scoring helpers, guardrails
-- `apps/worker/src/` — briefing workflow tasks
-- `apps/web/` — briefing generation API, enhanced briefing pages
-- `packages/db/` — repository helpers if needed
+- `packages/domain/src/` — alert scoring, severity classification, dedup/cooldown
+- `packages/ai/src/` — alert card generation schema, prompt, evaluator
+- `apps/worker/src/` — classify-event, generate-alert, deliver-alerts tasks
+- `apps/web/` — alert API routes, enhanced alert center, notification preferences
+- `packages/db/` — alert queries
 
 ## Steps
 
-1. Install AI SDK + provider dependencies in packages/ai.
-2. Build Model Gateway (provider adapters, extractObject, streamAnswer, judge).
-3. Build AI-specific schemas (event extraction output, briefing composition output).
-4. Build Prompt Registry with versioned templates (extraction, briefing compose).
-5. Build tool contracts (search-documents, get-price-snapshot).
-6. Build worker tasks (extract-events, compose-briefing, publish-briefing).
-7. Build domain guardrails + scoring helpers.
-8. Build briefing generation API + enhance briefing pages.
-9. Build first evaluator set + fixtures.
-10. Verification: typecheck, test, build, commit.
+1. Alert scoring + severity classification (domain layer).
+2. AI alert schemas + alert generation prompt.
+3. Worker tasks (classify-event, generate-alert, deliver-alerts).
+4. Alert API routes (list, read, dismiss, mute, preferences).
+5. Enhanced alert center UI (filters, actions, detail view).
+6. Notification preferences page + API.
+7. Tests + alert precision evaluator.
+8. Verification: typecheck, test, build, commit.
 
 ## Verification
 
 - `pnpm turbo typecheck` — all pass
-- `pnpm turbo test` — all pass (including new AI/evaluator tests)
+- `pnpm turbo test` — all pass (including new alert tests)
 - `pnpm turbo build` — all pass
-- Model gateway unit tests with mock providers
-- Briefing workflow integration test with fixture data
+- Alert scoring unit tests with diverse severity inputs
+- Dedup and cooldown logic unit tests
+- Alert API integration patterns verified
 
 ## Progress Log
 
-- `done` — Step 1: Install AI SDK deps (ai@6.0.116, @ai-sdk/openai/anthropic/google)
-- `done` — Step 2: Model Gateway (ModelGateway class + provider adapters)
-- `done` — Step 3: AI schemas (eventExtraction, briefingComposition, judge)
-- `done` — Step 4: Prompt Registry (3 versioned prompts: extract, briefing, judge)
-- `done` — Step 5: Tool contracts (searchDocuments, getPriceSnapshot, getCompanyProfile)
-- `done` — Step 6: Worker tasks (extract-events, compose-briefing, generate-briefing)
-- `done` — Step 7: Domain guardrails + scoring (materiality/relevance/rank, briefing gates)
-- `done` — Step 8: Briefing API + enhanced pages (generate route, admin button, evidence display)
-- `done` — Step 9: Evaluators + fixtures (factuality, citation-coverage, headline-quality + 59 tests)
-- `done` — Step 10: Verification (typecheck ✅ 8/8, test ✅ 8/8 63 tests, build ✅ 2/2)
+- `done` — Step 1: Alert scoring + severity (classifyAlertSeverity, shouldAlert, isDuplicate, isCoolingDown)
+- `done` — Step 2: AI alert schemas + prompts (alertCardSchema, alertGenerationPrompt v1, evalAlertPrecision)
+- `done` — Step 3: Worker tasks (classify-event, generate-alert, deliver-alerts)
+- `done` — Step 4: Alert API routes (GET/PATCH /alerts, GET/PATCH /alerts/[id], GET/PUT /alerts/preferences)
+- `done` — Step 5: Enhanced alert center UI (severity filters, ticker badges, status badges, actions)
+- `done` — Step 6: Notification preferences (channel matrix, muted tickers, save to DB)
+- `done` — Step 7: Tests + evaluators (34 domain tests + 10 AI tests = 44 new, 101 total)
+- `done` — Step 8: Verification (typecheck ✅ 8/8, test ✅ 101 tests, build ✅ 2/2)
 
 ## Decisions
 

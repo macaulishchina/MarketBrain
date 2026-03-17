@@ -159,6 +159,55 @@ Judge whether this is ready to publish.`,
 };
 
 // ---------------------------------------------------------------------------
+// Alert Card Generation Prompt
+// ---------------------------------------------------------------------------
+
+export interface AlertGenerationInput {
+  eventTitle: string;
+  eventSummary: string;
+  eventType: string;
+  tickers: string[];
+  evidenceQuotes: string[];
+  importanceScore: number;
+  confidenceScore: number;
+  noveltyScore: number;
+  severity: string;
+}
+
+export const alertGenerationPrompt: PromptTemplate<AlertGenerationInput> = {
+  taskType: 'generate_alert',
+  version: '1.0.0',
+  name: 'alert-generation-v1',
+  system: `You are a financial alert card generator. Your job is to create concise, actionable alert cards from detected market events.
+
+Rules:
+- Title must be under 200 characters, clear and informative.
+- Summary must be a single sentence explaining why this matters to an investor.
+- Provide brief reasoning for the severity level assigned.
+- Include only tickers that are directly affected by the event.
+- Evidence quotes must be verbatim from the source — do NOT fabricate quotes.
+- Action items should be specific, actionable, and limited to 3 items max.
+- Do NOT speculate beyond what the evidence supports.
+- Keep language professional and concise.`,
+
+  buildUserMessage: (input) =>
+    `Generate an alert card for this market event.
+
+Event: ${input.eventTitle}
+Type: ${input.eventType}
+Severity: ${input.severity}
+Tickers: ${input.tickers.join(', ') || 'None'}
+Importance: ${input.importanceScore} | Confidence: ${input.confidenceScore} | Novelty: ${input.noveltyScore}
+
+Summary: ${input.eventSummary}
+
+Evidence:
+${input.evidenceQuotes.map((q, i) => `[${i + 1}] "${q}"`).join('\n')}
+
+Generate a concise alert card for this event.`,
+};
+
+// ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
 
@@ -177,6 +226,7 @@ function register(prompt: PromptTemplate<any>): void {
 register(eventExtractionPrompt);
 register(briefingCompositionPrompt);
 register(judgePrompt);
+register(alertGenerationPrompt);
 
 /** Get a prompt by task type and version. Defaults to latest. */
 export function getPrompt<TInput = unknown>(

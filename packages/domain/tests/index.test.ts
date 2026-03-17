@@ -15,6 +15,11 @@ import {
   computeRankScore,
   gateBriefingItem,
   gateBriefing,
+  classifyAlertSeverity,
+  shouldAlert,
+  isDuplicate,
+  isCoolingDown,
+  gateAlert,
 } from '../src/index';
 
 describe('@marketbrain/domain enums', () => {
@@ -335,6 +340,275 @@ describe('@marketbrain/domain guardrails', () => {
         items: [],
       });
       expect(result.passed).toBe(false);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Alert Severity Classification
+// ---------------------------------------------------------------------------
+
+describe('@marketbrain/domain alert scoring', () => {
+  describe('classifyAlertSeverity', () => {
+    it('returns s1 for very high composite', () => {
+      const result = classifyAlertSeverity({
+        confidenceScore: 0.95,
+        materiality: 0.9,
+        relevance: 0.8,
+      });
+      expect(result).toBe('s1');
+    });
+
+    it('returns s2 for medium composite', () => {
+      const result = classifyAlertSeverity({
+        confidenceScore: 0.6,
+        materiality: 0.5,
+        relevance: 0.5,
+      });
+      expect(result).toBe('s2');
+    });
+
+    it('returns s3 for low composite', () => {
+      const result = classifyAlertSeverity({
+        confidenceScore: 0.3,
+        materiality: 0.2,
+        relevance: 0.1,
+      });
+      expect(result).toBe('s3');
+    });
+
+    it('uses correct weights (0.5 conf + 0.3 mat + 0.2 rel)', () => {
+      // 0.5*1 + 0.3*0 + 0.2*0 = 0.5 → s2
+      const result = classifyAlertSeverity({
+        confidenceScore: 1,
+        materiality: 0,
+        relevance: 0,
+      });
+      expect(result).toBe('s2');
+    });
+
+    it('boundary: exactly 0.7 composite → s1', () => {
+      // 0.5*1 + 0.3*0.5 + 0.2*0.25 = 0.5 + 0.15 + 0.05 = 0.7
+      const result = classifyAlertSeverity({
+        confidenceScore: 1,
+        materiality: 0.5,
+        relevance: 0.25,
+      });
+      expect(result).toBe('s1');
+    });
+  });
+
+  describe('shouldAlert', () => {
+    it('returns false for confidence below 0.3', () => {
+      expect(
+        shouldAlert({
+          confidenceScore: 0.2,
+          eventTickers: ['AAPL'],
+          watchlistTickers: ['AAPL'],
+        }),
+      ).toBe(false);
+    });
+
+    it('returns true when tickers overlap and confidence sufficient', () => {
+      expect(
+        shouldAlert({
+          confidenceScore: 0.5,
+          eventTickers: ['AAPL'],
+          watchlistTickers: ['AAPL', 'MSFT'],
+        }),
+      ).toBe(true);
+    });
+
+    it('returns false when no ticker overlap', () => {
+      expect(
+        shouldAlert({
+          confidenceScore: 0.8,
+          eventTickers: ['GOOG'],
+          watchlistTickers: ['AAPL', 'MSFT'],
+        }),
+      ).toBe(false);
+    });
+
+    it('returns false when user has no watchlist and event has tickers', () => {
+      expect(
+        shouldAlert({
+          confidenceScore: 0.8,
+          eventTickers: ['AAPL'],
+          watchlistTickers: [],
+        }),
+      ).toBe(false);
+    });
+
+    it('macro events (no tickers) alert if confidence ≥ 0.5', () => {
+      expect(
+        shouldAlert({
+          confidenceScore: 0.5,
+          eventTickers: [],
+          watchlistTickers: ['AAPL'],
+        }),
+      ).toBe(true);
+    });
+
+    it('macro events (no tickers) do not alert if confidence < 0.5', () => {
+      expect(
+        shouldAlert({
+          confidenceScore: 0.4,
+          eventTickers: [],
+          watchlistTickers: ['AAPL'],
+        }),
+      ).toBe(false);
+    });
+
+    it('is case-insensitive on ticker matching', () => {
+      expect(
+        shouldAlert({
+          confidenceScore: 0.5,
+          eventTickers: ['aapl'],
+          watchlistTickers: ['AAPL'],
+        }),
+      ).toBe(true);
+    });
+  });
+
+  describe('isDuplicate', () => {
+    it('detects duplicate event+user pair', () => {
+      const existing = [
+        { eventId: 'e1', userId: 'u1', createdAt: new Date() },
+      ];
+      expect(isDuplicate('e1', 'u1', existing)).toBe(true);
+    });
+
+    it('returns false for different event', () => {
+      const existing = [
+        { eventId: 'e1', userId: 'u1', createdAt: new Date() },
+      ];
+      expect(isDuplicate('e2', 'u1', existing)).toBe(false);
+    });
+
+    it('returns false for different user', () => {
+      const existing = [
+        { eventId: 'e1', userId: 'u1', createdAt: new Date() },
+      ];
+      expect(isDuplicate('e1', 'u2', existing)).toBe(false);
+    });
+
+    it('returns false for empty history', () => {
+      expect(isDuplicate('e1', 'u1', [])).toBe(false);
+    });
+  });
+
+  describe('isCoolingDown', () => {
+    it('suppresses S1 for same ticker within 4h', () => {
+      const now = new Date();
+      const recent = [
+        {
+          severity: 's1' as const,
+          tickers: ['AAPL'],
+          createdAt: new Date(now.getTime() - 60 * 60 * 1000), // 1h ago
+        },
+      ];
+      expect(isCoolingDown('s1', ['AAPL'], recent, now)).toBe(true);
+    });
+
+    it('does not suppress S1 for expired cooldown', () => {
+      const now = new Date();
+      const recent = [
+        {
+          severity: 's1' as const,
+          tickers: ['AAPL'],
+          createdAt: new Date(now.getTime() - 5 * 60 * 60 * 1000), // 5h ago
+        },
+      ];
+      expect(isCoolingDown('s1', ['AAPL'], recent, now)).toBe(false);
+    });
+
+    it('does not suppress S2 alerts', () => {
+      const now = new Date();
+      const recent = [
+        {
+          severity: 's1' as const,
+          tickers: ['AAPL'],
+          createdAt: new Date(now.getTime() - 60 * 60 * 1000),
+        },
+      ];
+      expect(isCoolingDown('s2', ['AAPL'], recent, now)).toBe(false);
+    });
+
+    it('does not suppress S1 for different ticker', () => {
+      const now = new Date();
+      const recent = [
+        {
+          severity: 's1' as const,
+          tickers: ['MSFT'],
+          createdAt: new Date(now.getTime() - 60 * 60 * 1000),
+        },
+      ];
+      expect(isCoolingDown('s1', ['AAPL'], recent, now)).toBe(false);
+    });
+
+    it('returns false for no event tickers (macro)', () => {
+      const now = new Date();
+      const recent = [
+        {
+          severity: 's1' as const,
+          tickers: ['AAPL'],
+          createdAt: new Date(now.getTime() - 60 * 60 * 1000),
+        },
+      ];
+      expect(isCoolingDown('s1', [], recent, now)).toBe(false);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Alert guardrails
+// ---------------------------------------------------------------------------
+
+describe('@marketbrain/domain alert guardrails', () => {
+  const validAlert = {
+    title: 'AAPL beats Q4 estimates',
+    summary: 'Strong revenue growth signals sustained demand.',
+    evidenceQuotes: ['Revenue of $124B exceeded consensus by 3%.'],
+    confidenceScore: 0.8,
+    tickers: ['AAPL'],
+  };
+
+  describe('gateAlert', () => {
+    it('passes a valid alert', () => {
+      const result = gateAlert(validAlert);
+      expect(result.passed).toBe(true);
+      expect(result.failures).toHaveLength(0);
+    });
+
+    it('fails for missing title', () => {
+      const result = gateAlert({ ...validAlert, title: '' });
+      expect(result.passed).toBe(false);
+      expect(result.failures).toContain('Missing alert title');
+    });
+
+    it('fails for title over 200 chars', () => {
+      const result = gateAlert({ ...validAlert, title: 'X'.repeat(201) });
+      expect(result.passed).toBe(false);
+    });
+
+    it('fails for missing summary', () => {
+      const result = gateAlert({ ...validAlert, summary: '' });
+      expect(result.passed).toBe(false);
+    });
+
+    it('fails for zero evidence', () => {
+      const result = gateAlert({ ...validAlert, evidenceQuotes: [] });
+      expect(result.passed).toBe(false);
+    });
+
+    it('fails for low confidence', () => {
+      const result = gateAlert({ ...validAlert, confidenceScore: 0.1 });
+      expect(result.passed).toBe(false);
+    });
+
+    it('passes at confidence boundary (0.3)', () => {
+      const result = gateAlert({ ...validAlert, confidenceScore: 0.3 });
+      expect(result.passed).toBe(true);
     });
   });
 });

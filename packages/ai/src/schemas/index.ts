@@ -120,3 +120,26 @@ export const judgeResultSchema = z.object({
 });
 
 export type JudgeResult = z.infer<typeof judgeResultSchema>;
+
+// ---------------------------------------------------------------------------
+// Alert card generation output — model returns this for alert cards
+// ---------------------------------------------------------------------------
+
+/** Output schema for alert card generation from an event. */
+export const alertCardSchema = z.object({
+  title: z.string().max(200).describe('Concise alert headline'),
+  summary: z.string().max(500).describe('One-sentence importance statement'),
+  severityReasoning: z
+    .string()
+    .max(300)
+    .describe('Brief reasoning for the assigned severity level'),
+  tickers: z.array(z.string()).describe('Affected ticker symbols'),
+  eventType: z.string().describe('Event category: earnings, regulatory, macro, product, etc.'),
+  evidenceQuotes: z.array(z.string()).min(1).describe('Key quotes supporting this alert'),
+  actionItems: z
+    .array(z.string())
+    .max(3)
+    .describe('Suggested next actions for the investor'),
+});
+
+export type AlertCard = z.infer<typeof alertCardSchema>;

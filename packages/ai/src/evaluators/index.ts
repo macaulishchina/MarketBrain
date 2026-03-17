@@ -5,7 +5,7 @@
  * for monitoring and regression detection. They run offline or in test suites.
  */
 
-import type { ComposedBriefingItem, EventExtraction } from '../schemas/index';
+import type { ComposedBriefingItem, EventExtraction, AlertCard } from '../schemas/index';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -141,4 +141,44 @@ export function evalHeadlineQuality(items: ComposedBriefingItem[]): EvalResult {
   }
 
   return { name: 'headline-quality', score: good / items.length, details };
+}
+
+// ---------------------------------------------------------------------------
+// Alert Precision Evaluator
+// ---------------------------------------------------------------------------
+
+export interface AlertFeedback {
+  alertCard: AlertCard;
+  status: 'read' | 'dismissed' | 'pending' | 'sent';
+  clicked: boolean;
+}
+
+/**
+ * Measures alert precision: fraction of delivered alerts that were read (not dismissed).
+ * Alerts that are "read" or "clicked" are considered useful. "Dismissed" = false positive.
+ * Pending/sent alerts are excluded from the calculation.
+ */
+export function evalAlertPrecision(feedback: AlertFeedback[]): EvalResult {
+  const details: string[] = [];
+  const delivered = feedback.filter((f) => f.status === 'read' || f.status === 'dismissed');
+
+  if (delivered.length === 0) {
+    return { name: 'alert-precision', score: 0, details: ['No delivered alerts to evaluate'] };
+  }
+
+  let useful = 0;
+  for (const f of delivered) {
+    if (f.status === 'read') {
+      useful++;
+    } else {
+      details.push(`Dismissed: "${f.alertCard.title.slice(0, 60)}…"`);
+    }
+  }
+
+  const score = useful / delivered.length;
+  if (score < 0.5) {
+    details.push(`Low precision: ${useful}/${delivered.length} alerts were useful`);
+  }
+
+  return { name: 'alert-precision', score, details };
 }
