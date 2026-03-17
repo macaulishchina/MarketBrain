@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build web image
         run: docker build -f Dockerfile.web -t marketbrain-web:${{ github.sha }} .
 
@@ -17,6 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Build worker image
         run: docker build -f Dockerfile.worker -t marketbrain-worker:${{ github.sha }} .
